@@ -1,12 +1,11 @@
 #!/usr/bin/python
 
-KINDS_OF_FIELD_TILES = dict([('Unknown', 'F'), ('Dirt', ' '), ('Tree', '|'), ('Water', '#'), ('Plants', '^')])
 KINDS_OF_DUNGEON_TILES = dict([('Unknown', 'F'), ('Cave', ' '), ('Coal', '+'), ('Stone', '.'), ('Iron', '*'), ('Gold', '^'), ('Worked Stone', 'O')])
 
-KINDS_OF_DWARFES_PROFESSIONS = {'Mason', 'Healer', 'Craftsman', 'Metallurgist'}
+KINDS_OF_DWARFES_PROFESSIONS = {'Warrior', 'Healer'}
 DIRECTIONS = dict([('North', 0), ('South', 1), ('West', 2), ('East', 3)])
 
-INSTRUMENTS = dict([('Stone Pickaxe', 'T'), ('Wooden Pickaxe', '7'), ('Axe', 'P'), ('Wooden Stick', '/')])
+INSTRUMENTS = dict([('Stone Pickaxe', 'T'), ('Wooden Pickaxe', '7'), ('Axe', 'P'), ('Wooden Stick', '/'), ('')])
 BLOCKS = dict([('Worked Stone', 'O'), ('Worked Iron', '#'), ('Worked Gold', '$'), ('Coal', '*')])
 
 #SIZE_OF_FIELD = 1000
@@ -21,16 +20,13 @@ class Tile:
     tile_type = ' '
 
     def set_tile_type(self, tp):
-        tyle_type = tp
+        self.tyle_type = tp
 
 
 class Environment:
     '''class representing global game characteristics'''
-    
-    #ground world part
-    field = [[KINDS_OF_FIELD_TILES['Dirt']] * SIZE_OF_FIELD for _ in range(SIZE_OF_FIELD)]
-    
-    #ground world part
+        
+    #underground ground world part
     dungeon = [[KINDS_OF_DUNGEON_TILES['Cave']] * SIZE_OF_FIELD for _ in range(SIZE_OF_FIELD)]
 
     #global game timer
@@ -61,6 +57,15 @@ class Environment:
         for dwarf in self.dwarfs_list:
             if dwarf.name == name:
                 return dwarf
+    
+    def update_dwarf(self, name, updating_dwarf):
+        for i in range(len(self.dwarfs_list)):
+            if self.dwarfs_list[i].name == name:
+                self.dwarfs_list[i] = updating_dwarf
+
+                self.entities[self.dwarfs_list[i].coords[0]][self.dwarfs_list[i].coords[1]][self.dwarfs_list[i].coords[2]] = 'None'
+                self.entities[updating_dwarf.coords[0]][updating_dwarf.coords[1]][updating_dwarf.coords[2]] = updating_dwarf
+                return
 
     def get_entity(self, coords):
         (level, row, col) = coords

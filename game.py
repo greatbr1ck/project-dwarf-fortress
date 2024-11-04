@@ -13,7 +13,6 @@ def get_initial_dwarf_coords(number_of_dwarfes):
     q = []
     q.append((row, col))
 
-    #на самом деле дварфы появляются не в подземелье, а над землей, так что надо будет писать (0, row, col)
     initial_dwarf_coords.append((1, row, col))
     
     visited = [[False] * environment.SIZE_OF_FIELD for _ in range(environment.SIZE_OF_FIELD)]
@@ -177,18 +176,15 @@ def init_game():
     
     #generate environment
     env = environment.Environment(dwarfes_list)
-
-    #пусть пока дварфы живут только под землей
     env.dungeon = generate_dungeon(initial_coords)
-    #env.field = generate_field(initial_coords)
     
-    print("DUNGEON")
-    for _ in env.dungeon:
-        for c in _:
-            print(c, end='')
-        print()
+    # print("DUNGEON")
+    # for _ in env.dungeon:
+    #     for c in _:
+    #         print(c, end='')
+    #     print()
 
-    return env
+    # return env
 
 #functions for user
 
@@ -237,26 +233,24 @@ def move(dwarf_name, destination_coords, env):
     Before using 'move' funtion user should check out whether this dwarf can reach the destination.
     It can be done by following the caves map, where every dwarf marks the tiles he ever visited
     '''
-
-    if not env.dwarf_exists(dwarf_name):
-        print("Type the name of existing and alive dwarf")
-        return
     
     dwarf = env.get_dwarf(dwarf_name)    
-
-    if dwarf.coords[0] != destination_coords[0]:
-        print("You can move your dwarfs from one level to another only by using the portal")
-        return
-
-    while (dwarf.coords != destination_coords):
-        dwarf.move(destination_coords[1:], env)
     dwarf.move(destination_coords[1:], env)
+    dwarf.destination_coords = destination_coords
+
+    if dwarf.coords == destination_coords:
+        if dwarf.doing_command == 'Move':
+            dwarf.doing_command = 'Nothing'
+            dwarf.destination_coords = (1, -1, -1)
+        elif dwarf.doing_command == 'Mine:Move':
+            dwarf.doing_command = 'Mine:Reached'
+            dwarf.destination_coords = (1, -1, -1)
+        elif dwarf.doing_command == 'Throw:Move':
+            dwarf.doing_command = 'Throw:Reached'
+            dwarf.destination_coords = (1, -1, -1)
+    env.update_dwarf(dwarf_name, dwarf)
 
 def mine(dwarf_name, env):
-    if not env.dwarf_exists(dwarf_name):
-        print("Type the name of existing and alive dwarf")
-        return
-    
     dwarf = env.get_dwarf(dwarf_name)
 
     (row, col) = dwarf.coords[1:]
@@ -272,218 +266,569 @@ def mine(dwarf_name, env):
     if 0 <= row and row < environment.SIZE_OF_FIELD and 0 <= col and col < environment.SIZE_OF_FIELD:
         dwarf.mine((1, row, col), env)
     
-    # print("DUNGEON")
-    # for _ in env.dungeon:
-    #     for c in _:
-    #         print(c, end='')
-    #     print()
+    env.update_dwarf(dwarf_name, dwarf)
 
 def mine_area(dwarf_name, coords1, coords2, env):
-    if not env.dwarf_exists(dwarf_name):
-        print("Type the name of existing and alive dwarf")
-        return
-    
     dwarf = env.get_dwarf(dwarf_name)
 
     if dwarf.inventory.is_filled():
         print("Dwarf's inventory is filled")
-        return
-
-    print(dwarf.coords)
-    if dwarf.coords[0] != coords1[0] or dwarf.coords[0] != coords2[0]:
-        print("You can move your dwarfs from one level to another only by using the portal")
-        return
-    
-    if not(coords1[1] <= coords2[1] and coords1[2] <= coords2[2]):
-        print('Choose left high and right low corners of mining are')
-        return
-    
-    get_dwarf_info(dwarf_name, env)
-
-    #update caves_map - лучше оформить отдельной функцией
-    visible = dwarf.get_visibility(env)
-    
-    (row, col) = dwarf.coords[1:]
-    row_in_visible = dwarf.radius_to_see
-    col_in_visible = dwarf.radius_to_see
-
-    for i in range(len(visible)):
-        for j in range(len(visible)):
-            r = i + row - row_in_visible
-            c = j + col - col_in_visible
-
-            if dwarf.coords[0] == 1 and 0 <= r and r < environment.SIZE_OF_FIELD and 0 <= c and c < environment.SIZE_OF_FIELD and \
-                (visible[i][j] in {'D', 'G', environment.KINDS_OF_DUNGEON_TILES['Cave'], environment.KINDS_OF_DUNGEON_TILES['Worked Stone']}):
-                dwarf.caves_map[r][c] = environment.KINDS_OF_DUNGEON_TILES['Cave']
-            #сделать аналогичную caves_map штуку для наземного уровня
-    
-    (finish_row, finish_col) = (-1, -1)
-    for srow in range(coords1[1], coords2[1] + 1):
-        for scol in range(coords1[2], coords2[2] + 1):
-            q = []
-            q.append((srow, scol))
-    
-            visited = [[False] * environment.SIZE_OF_FIELD for _ in range(environment.SIZE_OF_FIELD)]
-            visited[srow][scol] = True
-
-            while not len(q) == 0:
-                (row, col) = q.pop(0)
-                for step in ((-1, 0), (0, -1), (1, 0), (0, 1)):
-                    (r, c) = (row + step[0], col + step[1])
-                    if 0 <= r and r < environment.SIZE_OF_FIELD and 0 <= c and c < environment.SIZE_OF_FIELD and not visited[r][c] and \
-                       dwarf.caves_map[r][c] == environment.KINDS_OF_DUNGEON_TILES["Cave"]:
-                        q.append((r, c))
-                        visited[r][c] = True
-            
-            if visited[dwarf.coords[1]][dwarf.coords[2]]:
-                (finish_row, finish_col) = (srow, scol)
-    
-    print(finish_row, finish_col)
-    
-    if finish_row == -1:
-        print('It is impossible to reach given are')
-        return
-    
-    for step in ((-1, 0), (0, -1), (1, 0), (0, 1)):
-        (r, c) = (finish_row + step[0], finish_col + step[1])
-        if 0 <= r and r < environment.SIZE_OF_FIELD and 0 <= c and c < environment.SIZE_OF_FIELD and \
-           dwarf.caves_map[r][c] == environment.KINDS_OF_DUNGEON_TILES["Cave"]:
-            (finish_row, finish_col) = (r, c)
-            break
-    
-    move(dwarf_name, (1, finish_row, finish_col), env)
-
-    print('moved')
-    get_dwarf_info(dwarf_name, env)
-
-    #start mining the area
-
-    mine(dwarf_name, env)
-
-    if dwarf.inventory.is_filled():
-        print("Dwarf's inventory is filled")
-        return
-    
-    if dwarf.direction == 'North':
-        if dwarf.caves_map[dwarf.coords[1] - 1][dwarf.coords[2]] in {'G', 'D'}:
-            dwarf.fight(env)
-        if not dwarf.is_alive:
-            return
-        move(dwarf_name, (1, dwarf.coords[1] - 1, dwarf.coords[2]), env)
-    elif dwarf.direction == 'South':
-        if dwarf.caves_map[dwarf.coords[1] + 1][dwarf.coords[2]] in {'G', 'D'}:
-            dwarf.fight(env)
-        if not dwarf.is_alive:
-            return
-        move(dwarf_name, (1, dwarf.coords[1] + 1, dwarf.coords[2]), env)
-    elif dwarf.direction == 'West':
-        if dwarf.caves_map[dwarf.coords[1]][dwarf.coords[2] - 1] in {'G', 'D'}:
-            dwarf.fight(env)
-        if not dwarf.is_alive:
-            return    
-        move(dwarf_name, (1, dwarf.coords[1], dwarf.coords[2] - 1), env)
-    else:
-        if dwarf.caves_map[dwarf.coords[1]][dwarf.coords[2] + 1] in {'G', 'D'}:
-            dwarf.fight(env)
-        if not dwarf.is_alive:
-            return
-        move(dwarf_name, (1, dwarf.coords[1], dwarf.coords[2] + 1), env)
-    dwarf.direction = 'North'
-
-    while dwarf.coords[1] > coords1[1]:
-        mine(dwarf_name, env)
-        move(dwarf_name, (1, dwarf.coords[1] - 1, dwarf.coords[2]), env)
         
-        if dwarf.inventory.is_filled():
-            print("Dwarf's inventory is filled")
-            return
+        dwarf.doing_command = 'Nothing'
+        dwarf.coords1 = (1, -1, -1)
+        dwarf.coords2 = (1, -1, -1)
+        env.update_dwarf(dwarf_name, dwarf)
+        return
 
-    print('moved1')
-    get_dwarf_info(dwarf_name, env)
+    if dwarf.doing_command == 'Mine':
+        visible = dwarf.get_visibility(env)
+        
+        (row, col) = dwarf.coords[1:]
+        row_in_visible = dwarf.radius_to_see
+        col_in_visible = dwarf.radius_to_see
 
-    dwarf.direction = 'West'
-    while dwarf.coords[2] > coords1[2]:
-        mine(dwarf_name, env)
-        move(dwarf_name, (1, dwarf.coords[1], dwarf.coords[2] - 1), env)
+        for i in range(len(visible)):
+            for j in range(len(visible)):
+                r = i + row - row_in_visible
+                c = j + col - col_in_visible
 
-        if dwarf.inventory.is_filled():
-            print("Dwarf's inventory is filled")
-            return
-    
-    print('moved2')
-    get_dwarf_info(dwarf_name, env)
+                if dwarf.coords[0] == 1 and 0 <= r and r < environment.SIZE_OF_FIELD and 0 <= c and c < environment.SIZE_OF_FIELD and \
+                    (visible[i][j] in {'D', 'G', environment.KINDS_OF_DUNGEON_TILES['Cave'], environment.KINDS_OF_DUNGEON_TILES['Worked Stone']}):
+                    dwarf.caves_map[r][c] = environment.KINDS_OF_DUNGEON_TILES['Cave']
+        
+        (finish_row, finish_col) = (-1, -1)
+        for srow in range(coords1[1], coords2[1] + 1):
+            for scol in range(coords1[2], coords2[2] + 1):
+                q = []
+                q.append((srow, scol))
+        
+                visited = [[False] * environment.SIZE_OF_FIELD for _ in range(environment.SIZE_OF_FIELD)]
+                visited[srow][scol] = True
 
-    print('reached')
-    for _ in env.dungeon:
-        for c in _:
-            print(c, end='')
-        print()
-    print()
-
-    show_dwarf_inventory(dwarf_name, env)
-    
-    #теперь сделать обход змейкой из левого верхнего угла в правый нижний 
-    for i in range(coords1[1], coords2[1] + 1):
-        dwarf.direction = 'West'
-        col_diff = -1
-        if i % 2 == 0:
-            dwarf.direction = 'East'
-            col_diff = 1
-
-        for scol in range(coords1[2], coords2[2]):
-            destination = (dwarf.coords[1] + col_diff, dwarf.coords[2])
-            
-            #it may happen that in destination coord stands another dwarf or goblin. Is so, dwarf attack instead of going there
-            if dwarf.caves_map[destination[0]][destination[1]] in {'G', 'D'}:
-                dwarf.fight(env)
-            if not dwarf.is_alive:
-                return
-
-            if dwarf.caves_map[destination[0]][destination[1]] in {environment.KINDS_OF_DUNGEON_TILES['Cave'], \
-                                                                     environment.KINDS_OF_DUNGEON_TILES['Worked Stone']}:
-                move(dwarf_name, (1, destination[0], destination[1]), env)
-            else:
-                mine(dwarf_name, env)
-                move(dwarf_name, (1, destination[0], destination[1]), env)
+                while not len(q) == 0:
+                    (row, col) = q.pop(0)
+                    for step in ((-1, 0), (0, -1), (1, 0), (0, 1)):
+                        (r, c) = (row + step[0], col + step[1])
+                        if 0 <= r and r < environment.SIZE_OF_FIELD and 0 <= c and c < environment.SIZE_OF_FIELD and not visited[r][c] and \
+                            dwarf.caves_map[r][c] == environment.KINDS_OF_DUNGEON_TILES["Cave"]:
+                            q.append((r, c))
+                            visited[r][c] = True
                 
-                if dwarf.inventory.is_filled():
-                    print("Dwarf's inventory is filled")
-                    return
-            
-        dwarf.direction = 'South'
-        if dwarf.coords[1] + 1 <= coords2[1]:
-            mine(dwarf_name, env)
-            move(dwarf_name, (1, dwarf.coords[1] + 1, dwarf.coords[2]), env) 
+                if visited[dwarf.coords[1]][dwarf.coords[2]]:
+                    (finish_row, finish_col) = (srow, scol)
+
+        if finish_row == -1:
+            print('It is impossible to reach given area')
+            dwarf.doing_command = 'Nothing'
+            dwarf.coords1 = (1, -1, -1)
+            dwarf.coords2 = (1, -1, -1)
+            env.update_dwarf(dwarf_name, dwarf)
+            return
+        
+        for step in ((-1, 0), (0, -1), (1, 0), (0, 1)):
+            (r, c) = (finish_row + step[0], finish_col + step[1])
+            if 0 <= r and r < environment.SIZE_OF_FIELD and 0 <= c and c < environment.SIZE_OF_FIELD and \
+            dwarf.caves_map[r][c] == environment.KINDS_OF_DUNGEON_TILES["Cave"]:
+                (finish_row, finish_col) = (r, c)
+                break
+        
+        dwarf.doing_command = 'Mine:Move'
+        dwarf.destination_coords = (1, finish_row, finish_col)
+        env.update_dwarf(dwarf_name, dwarf)
+    if dwarf.doing_command == 'Mine:Move':
+        move(dwarf_name, dwarf.destination_coords, env) 
+        env.update_dwarf(dwarf_name, dwarf)
+    elif dwarf.doing_command == 'Mine:Reached':    
+        for step in ((-1, 0), (0, -1), (1, 0), (0, 1)):
+            (r, c) = (dwarf.coords[1] + step[0], dwarf.coords[2] + step[1])
+            if 0 <= r and r < environment.SIZE_OF_FIELD and 0 <= c and c < environment.SIZE_OF_FIELD and \
+               coords1[1] <= r and r <= coords2[1] and coords1[2] <= c and c <= coords2[2]:
+                if step == (-1, 0):
+                    dwarf.direction == 'North'
+                elif step == (0, -1):
+                    dwarf.direction == 'West'
+                elif step == (1, 0):
+                    dwarf.direction == 'South'
+                else:
+                    dwarf.direction == 'East'
+
+        env.update_dwarf(dwarf_name, dwarf)
+        
+        #start mining the area    
+        mine(dwarf_name, env)
+
+        if dwarf.inventory.is_filled():
+            print("Dwarf's inventory is filled")
+            dwarf.doing_command = 'Nothing'
+            dwarf.destination_coords = (1, -1, -1)
+            dwarf.coords1 = (1, -1, -1)
+            dwarf.coords2 = (1, -1, -1)
+            env.update_dwarf(dwarf_name, dwarf)
+            return
+        
+        dwarf.doing_command = 'Mine:Move in area'
+        env.update_dwarf(dwarf_name, dwarf)
+    elif dwarf.doing_command == 'Mine:Move in area':
+        if dwarf.direction == 'North':
+            move(dwarf_name, (1, dwarf.coords[1] - 1, dwarf.coords[2]), env)
+        elif dwarf.direction == 'South':
+            move(dwarf_name, (1, dwarf.coords[1] + 1, dwarf.coords[2]), env)
+        elif dwarf.direction == 'West':
+            move(dwarf_name, (1, dwarf.coords[1], dwarf.coords[2] - 1), env)
+        else:
+            move(dwarf_name, (1, dwarf.coords[1], dwarf.coords[2] + 1), env)
+        dwarf.direction = 'North'
+
+        dwarf.doing_command = 'Mine:Move in left corner'
+        env.update_dwarf(dwarf_name, dwarf)
+    elif dwarf.doing_command == 'Mine:Move in left corner':
+        if dwarf.coords[1] > coords1[1]:
+            if dwarf.caves_map[dwarf.coords[1] - 1][dwarf.coords[2]] != environment.KINDS_OF_DUNGEON_TILES['Cave']:
+                mine(dwarf_name, env)
+            move(dwarf_name, (1, dwarf.coords[1] - 1, dwarf.coords[2]), env)
+            env.update_dwarf(dwarf_name, dwarf)
             
             if dwarf.inventory.is_filled():
                 print("Dwarf's inventory is filled")
+                dwarf.destination_coords = (1, -1, -1)
+                dwarf.coords1 = (1, -1, -1)
+                dwarf.coords2 = (1, -1, -1)    
+                env.update_dwarf(dwarf_name, dwarf)
                 return
-    
-    show_dwarf_inventory(dwarf_name, env)
+        else:       
+            dwarf.direction = 'West'
+            env.update_dwarf(dwarf_name, dwarf)
+            
+            if dwarf.coords[2] > coords1[2]:
+                if dwarf.caves_map[dwarf.coords[1]][dwarf.coords[2] - 1] != environment.KINDS_OF_DUNGEON_TILES['Cave']:
+                    mine(dwarf_name, env)
+                move(dwarf_name, (1, dwarf.coords[1], dwarf.coords[2] - 1), env)
+                env.update_dwarf(dwarf_name, dwarf)
 
-def build_block(dwarf_name, block_name):
-    pass
+                if dwarf.inventory.is_filled():
+                    print("Dwarf's inventory is filled")
+                    dwarf.destination_coords = (1, -1, -1)
+                    dwarf.coords1 = (1, -1, -1)
+                    dwarf.coords2 = (1, -1, -1)
+                    env.update_dwarf(dwarf_name, dwarf)    
+                    return
+            else:
+                dwarf.doing_command = 'Mine:Reached in left corner'
+                env.update_dwarf(dwarf_name, dwarf)
+    elif dwarf.doing_command == 'Mine:Reached in left corner':
+        dwarf.direction = 'West'
+        env.update_dwarf(dwarf_name, dwarf)
+        
+        col_diff = -1
+        if (dwarf.coords[1] - dwarf.coords1[1]) % 2 == 0:
+            dwarf.direction = 'East'
+            env.update_dwarf(dwarf_name, dwarf)
+            col_diff = 1
+        
+        destination = (dwarf.coords[1], dwarf.coords[2] + col_diff)
+        if destination[1] > dwarf.coords2[2] or destination[1] < dwarf.coords1[2]:
+            dwarf.direction = 'South'
+            env.update_dwarf(dwarf_name, dwarf)
+        
+            if dwarf.coords[1] + 1 <= coords2[1]:
+                if dwarf.caves_map[dwarf.coords[1] + 1][dwarf.coords[2]] != environment.KINDS_OF_DUNGEON_TILES['Cave']:
+                    mine(dwarf_name, env)
+                move(dwarf_name, (1, dwarf.coords[1] + 1, dwarf.coords[2]), env) 
+                env.update_dwarf(dwarf_name, dwarf)
+                
+                if dwarf.inventory.is_filled():
+                    print("Dwarf's inventory is filled")
+                    dwarf.destination_coords = (1, -1, -1)
+                    dwarf.coords1 = (1, -1, -1)
+                    dwarf.coords2 = (1, -1, -1)
+                    env.update_dwarf(dwarf_name, dwarf)
+                    return
+            else:
+                dwarf.doing_command = 'Nothing'
+                dwarf.destination_coords = (1, -1, -1)
+                dwarf.coords1 = (1, -1, -1)
+                dwarf.coords2 = (1, -1, -1)
+                env.update_dwarf(dwarf_name, dwarf)
+                return
+        else:
+            if dwarf.caves_map[destination[0]][destination[1]] != environment.KINDS_OF_DUNGEON_TILES['Cave']:
+                mine(dwarf_name, env)
+            move(dwarf_name, (1, destination[0], destination[1]), env)            
+            env.update_dwarf(dwarf_name, dwarf)
+
+def throw(dwarf_name, env):
+    dwarf = env.get_dwarf(dwarf_name)
+
+    (row, col) = dwarf.coords[1:]
+    if dwarf.direction == 'North':
+        row -= 1
+    elif dwarf.direction == 'South':
+        row += 1
+    elif dwarf.direction == 'West':
+        col -= 1
+    else:
+        col += 1
+    
+    if 0 <= row and row < environment.SIZE_OF_FIELD and 0 <= col and col < environment.SIZE_OF_FIELD:
+        dwarf.throw((1, row, col), env)
+    
+    env.update_dwarf(dwarf_name, dwarf)
+
+def throw_area(dwarf_name, coords1, coords2, env):
+    dwarf = env.get_dwarf(dwarf_name)
+
+    if dwarf.inventory.is_garbage_thrown():
+        dwarf.doing_command = 'Nothing'
+        dwarf.coords1 = (1, -1, -1)
+        dwarf.coords2 = (1, -1, -1)
+        env.update_dwarf(dwarf_name, dwarf)
+        return
+
+    if dwarf.doing_command == 'Throw':
+        visible = dwarf.get_visibility(env)
+        
+        (row, col) = dwarf.coords[1:]
+        row_in_visible = dwarf.radius_to_see
+        col_in_visible = dwarf.radius_to_see
+
+        for i in range(len(visible)):
+            for j in range(len(visible)):
+                r = i + row - row_in_visible
+                c = j + col - col_in_visible
+
+                if dwarf.coords[0] == 1 and 0 <= r and r < environment.SIZE_OF_FIELD and 0 <= c and c < environment.SIZE_OF_FIELD and \
+                    (visible[i][j] in {'D', 'G', environment.KINDS_OF_DUNGEON_TILES['Cave'], environment.KINDS_OF_DUNGEON_TILES['Worked Stone']}):
+                    dwarf.caves_map[r][c] = environment.KINDS_OF_DUNGEON_TILES['Cave']
+        
+        (finish_row, finish_col) = (-1, -1)
+        for srow in range(coords1[1], coords2[1] + 1):
+            for scol in range(coords1[2], coords2[2] + 1):
+                q = []
+                q.append((srow, scol))
+        
+                visited = [[False] * environment.SIZE_OF_FIELD for _ in range(environment.SIZE_OF_FIELD)]
+                visited[srow][scol] = True
+
+                while not len(q) == 0:
+                    (row, col) = q.pop(0)
+                    for step in ((-1, 0), (0, -1), (1, 0), (0, 1)):
+                        (r, c) = (row + step[0], col + step[1])
+                        if 0 <= r and r < environment.SIZE_OF_FIELD and 0 <= c and c < environment.SIZE_OF_FIELD and not visited[r][c] and \
+                            dwarf.caves_map[r][c] == environment.KINDS_OF_DUNGEON_TILES["Cave"]:
+                            q.append((r, c))
+                            visited[r][c] = True
+                
+                if visited[dwarf.coords[1]][dwarf.coords[2]]:
+                    (finish_row, finish_col) = (srow, scol)
+
+        if finish_row == -1:
+            print('It is impossible to reach given area')
+            dwarf.doing_command = 'Nothing'
+            dwarf.dump_coords1 = (1, -1, -1)
+            dwarf.dump_coords2 = (1, -1, -1)
+            env.update_dwarf(dwarf_name, dwarf)
+            return
+        
+        for step in ((-1, 0), (0, -1), (1, 0), (0, 1)):
+            (r, c) = (finish_row + step[0], finish_col + step[1])
+            if 0 <= r and r < environment.SIZE_OF_FIELD and 0 <= c and c < environment.SIZE_OF_FIELD and \
+            dwarf.caves_map[r][c] == environment.KINDS_OF_DUNGEON_TILES["Cave"]:
+                (finish_row, finish_col) = (r, c)
+                break
+        
+        dwarf.doing_command = 'Throw:Move'
+        dwarf.destination_coords = (1, finish_row, finish_col)
+        env.update_dwarf(dwarf_name, dwarf)
+    if dwarf.doing_command == 'Throw:Move':
+        move(dwarf_name, dwarf.destination_coords, env) 
+        env.update_dwarf(dwarf_name, dwarf)
+    elif dwarf.doing_command == 'Throw:Reached':    
+        for step in ((-1, 0), (0, -1), (1, 0), (0, 1)):
+            (r, c) = (dwarf.coords[1] + step[0], dwarf.coords[2] + step[1])
+            if 0 <= r and r < environment.SIZE_OF_FIELD and 0 <= c and c < environment.SIZE_OF_FIELD and \
+               coords1[1] <= r and r <= coords2[1] and coords1[2] <= c and c <= coords2[2]:
+                if step == (-1, 0):
+                    dwarf.direction == 'North'
+                elif step == (0, -1):
+                    dwarf.direction == 'West'
+                elif step == (1, 0):
+                    dwarf.direction == 'South'
+                else:
+                    dwarf.direction == 'East'
+
+        env.update_dwarf(dwarf_name, dwarf)
+        
+        #start throwing in area    
+        throw(dwarf_name, env)
+
+        dwarf.doing_command = 'Throw:Move in area'
+        env.update_dwarf(dwarf_name, dwarf)
+    elif dwarf.doing_command == 'Throw:Move in area':
+        if dwarf.direction == 'North':
+            move(dwarf_name, (1, dwarf.coords[1] - 1, dwarf.coords[2]), env)
+        elif dwarf.direction == 'South':
+            move(dwarf_name, (1, dwarf.coords[1] + 1, dwarf.coords[2]), env)
+        elif dwarf.direction == 'West':
+            move(dwarf_name, (1, dwarf.coords[1], dwarf.coords[2] - 1), env)
+        else:
+            move(dwarf_name, (1, dwarf.coords[1], dwarf.coords[2] + 1), env)
+        dwarf.direction = 'North'
+
+        dwarf.doing_command = 'Throw:Move in left corner'
+        env.update_dwarf(dwarf_name, dwarf)
+    elif dwarf.doing_command == 'Throw:Move in left corner':
+        if dwarf.coords[1] > coords1[1]:
+            throw(dwarf_name, env)
+            move(dwarf_name, (1, dwarf.coords[1] - 1, dwarf.coords[2]), env)
+            env.update_dwarf(dwarf_name, dwarf)
+        else:       
+            dwarf.direction = 'West'
+            env.update_dwarf(dwarf_name, dwarf)
+            
+            if dwarf.coords[2] > coords1[2]:
+                throw(dwarf_name, env)
+                move(dwarf_name, (1, dwarf.coords[1], dwarf.coords[2] - 1), env)
+                env.update_dwarf(dwarf_name, dwarf)
+            else:
+                dwarf.doing_command = 'Throw:Reached in left corner'
+                env.update_dwarf(dwarf_name, dwarf)
+    elif dwarf.doing_command == 'Throw:Reached in left corner':
+        dwarf.direction = 'West'
+        env.update_dwarf(dwarf_name, dwarf)
+        
+        col_diff = -1
+        if (dwarf.coords[1] - dwarf.coords1[1]) % 2 == 0:
+            dwarf.direction = 'East'
+            env.update_dwarf(dwarf_name, dwarf)
+            col_diff = 1
+        
+        destination = (dwarf.coords[1], dwarf.coords[2] + col_diff)
+        if destination[1] > dwarf.coords2[2] or destination[1] < dwarf.coords1[2]:
+            dwarf.direction = 'South'
+            env.update_dwarf(dwarf_name, dwarf)
+        
+            if dwarf.coords[1] + 1 <= coords2[1]:
+                throw(dwarf_name, env)
+                move(dwarf_name, (1, dwarf.coords[1] + 1, dwarf.coords[2]), env) 
+                env.update_dwarf(dwarf_name, dwarf)
+            else:
+                dwarf.doing_command = 'Nothing'
+                dwarf.destination_coords = (1, -1, -1)
+                dwarf.dump_coords1 = (1, -1, -1)
+                dwarf.dump_coords2 = (1, -1, -1)
+                env.update_dwarf(dwarf_name, dwarf)
+                return
+        else:
+            throw(dwarf_name, env)
+            move(dwarf_name, (1, destination[0], destination[1]), env)            
+            env.update_dwarf(dwarf_name, dwarf)            
+
+def build_block(dwarf_name, env):
+    dwarf = env.get_dwarf(dwarf_name)
+    dwarf.build(env)
+    env.update_dwarf(dwarf_name, dwarf)  
+
+def mark_as_garbage(dwarf_name, item_name, env):
+    dwarf = env.get_dwarf(dwarf_name)
+    dwarf.mark_garbage(item_name)
+    env.update_dwarf(dwarf_name, dwarf)
 
 
 #-------------------------------GAME-----------------------------
 
+TURN_COMMANDS = dict([('Turn North', 'w'), ('Turn West', 'a'), ('Turn South', 's'), ('Turn East', 'd')])
+MOVE_COMMANDS = dict([('Move', 'mv')])
+MINE_COMMANDS = dict([('Mine', 'mn'), ('Mine Area', 'mna')])
+INFO_COMMANDS = dict([('Show Inventory', 'inv'), ('Get Map', 'map'), ('Get Info', 'inf')])
+BUILD_COMMANDS = dict([('Build', 'b')])
+THROW_COMMANDS = dict([('Mark as garbage', 'mk'), ('Throw', 't')])
+FINISH_COMMANDS = dict([('Move on to another dwarf', 'f')])
+BUY_COMMANDS = dict([('Buy for gold', 'g')])
+
 env = init_game()
 while True:
-    command = input()
-    dwarf_name = input()
+    used_dwarfs = set()
 
-    if command == 'get_dwarf_info':
-        get_dwarf_info(dwarf_name, env)
-    elif command == 'mine_area':
-        coords1 = map(int, input().split())
-        coords2 = map(int, input().split())
-        mine_area(dwarf_name, coords1, coords2, env)
-    elif command == 'mine':
-        mine(dwarf_name, env)    
-    elif command == 'move':
-        coords = map(int, input())
-        move(dwarf_name, coords, env)
-    elif command == 'get_map':
-        get_map(dwarf_name, env)
-    elif command == 'show_dwarf_inventory':
-        show_dwarf_inventory(dwarf_name, env)
+    for i in range(len(env.dwarfs_list)):
+        dwarf_name = input()
+
+        while True:
+            if not env.dwarf_exists(dwarf_name):
+                print("Type the name of existing and alive dwarf")
+            elif dwarf_name in used_dwarfs:
+                print('You have already used this dwarf in this move')
+            else:
+                used_dwarfs.add(dwarf_name)
+                break
+
+            dwarf_name = input()
+
+        dwarf = env.get_dwarf(dwarf_name)
+
+        is_mine_area_used = False
+        is_move_used = False
+        is_throw_used = False
+
+        while True:
+            command = input()
+
+            command_exists = False
+            is_finished = False
+
+            for c in tuple(TURN_COMMANDS.keys()):
+                if TURN_COMMANDS[c] == command:
+                    command_exists = True
+                    dwarf.direction = c[5:]
+                    env.update_dwarf(dwarf_name, dwarf)
+            for c in tuple(MOVE_COMMANDS.keys()):
+                if MOVE_COMMANDS[c] == command:
+                    if is_move_used:
+                        print("You can move each dwarf only once at single game stage")
+                        continue
+
+                    coords = tuple(map(int, input().split()))
+                    if len(coords) != 3:
+                        print("Unnacceptable coords format")
+                        continue
+
+                    dwarf.doing_command = 'Move'
+                    env.update_dwarf(dwarf_name, dwarf)
+                    move(dwarf_name, coords, env)
+                    env.update_dwarf(dwarf_name, dwarf)
+
+                    is_move_used = True
+                    command_exists = True
+            for c in list(MINE_COMMANDS.keys()):
+                if MINE_COMMANDS[c] == command:
+                    if c == 'Mine Area':
+                        if is_mine_area_used:
+                            print("Each dwarf can mine area only once at single game stage")
+                            continue
+                        
+                        coords1 = tuple(map(int, input().split()))
+                        if len(coords1) != 3:
+                            print("Unnacceptable coords format")
+                            continue
+
+                        coords2 = tuple(map(int, input().split()))
+                        if len(coords2) != 3:
+                            print("Unnacceptable coords format")
+                            continue
+
+                        if not(coords1[1] <= coords2[1] and coords1[2] <= coords2[2]):
+                            print('Choose LEFT HIGH and RIGHT LOW corners of mining area') 
+                            continue
+                    
+                        dwarf.doing_command = 'Mine'
+                        dwarf.coords1 = coords1
+                        dwarf.coords2 = coords2
+                        
+                        env.update_dwarf(dwarf_name, dwarf)
+                        mine_area(dwarf_name, coords1, coords2, env)
+                        env.update_dwarf(dwarf_name, dwarf)
+                        is_mine_area_used = True
+
+                    command_exists = True
+            for c in list(INFO_COMMANDS.keys()):
+                if INFO_COMMANDS[c] == command:
+                    if c == 'Get Map':
+                        get_map(dwarf_name, env)
+                    elif c == 'Get Info':
+                        get_dwarf_info(dwarf_name, env)
+                    else:
+                        show_dwarf_inventory(dwarf_name, env)
+
+                    command_exists = True
+            for c in list(BUILD_COMMANDS.keys()):
+                if BUILD_COMMANDS[c] == command:
+                    if dwarf.inventory.contains(environment.BLOCKS['Worked Stone']):
+                        build_block(dwarf_name, env)
+                        env.update_dwarf(dwarf_name, dwarf)
+
+                    command_exists = True
+            for c in list(THROW_COMMANDS.keys()):
+                if THROW_COMMANDS[c] == command:
+                    if c == 'Mark as garbage':
+                        item_name = input()
+                        is_name_correct = False
+
+                        for name in list(environment.BLOCKS.keys()):
+                            if name == item_name:
+                                is_name_correct = True
+                        
+                        if not is_name_correct:
+                            print("Type the item name correctly")
+                            continue
+                            
+                        mark_as_garbage(dwarf_name, item_name, env)
+                        env.update_dwarf(dwarf_name, dwarf)
+                    else:
+                        if is_throw_used:
+                            print("Each dwarf can throw items only once at single game stage")
+                            continue
+                            
+                        coords1 = tuple(map(int, input().split()))
+                        if len(coords1) != 3:
+                            print("Unnacceptable coords format")
+                            continue
+
+                        coords2 = tuple(map(int, input().split()))
+                        if len(coords2) != 3:
+                            print("Unnacceptable coords format")
+                            continue
+
+                        if not(coords1[1] <= coords2[1] and coords1[2] <= coords2[2]):
+                            print('Choose LEFT HIGH and RIGHT LOW corners of dump area')
+                            continue
+                    
+                        dwarf.doing_command = 'Throw'
+                        dwarf.dump_coords1 = coords1
+                        dwarf.dump_coords2 = coords2
+                        
+                        env.update_dwarf(dwarf_name, dwarf)
+                        throw_area(dwarf_name, coords1, coords2, env)
+                        env.update_dwarf(dwarf_name, dwarf)
+                        is_throw_used = True
+
+                    command_exists = True
+            for c in list(FINISH_COMMANDS.keys()):
+                if FINISH_COMMANDS[c] == command:
+                    is_finished = True
+                    command_exists = True
+            for c in list(BUY_COMMANDS.keys()):
+                if not dwarf.inventory.contains(environment.BLOCKS['Worked Gold']):
+                    print("There is not gold in dwarf's inventory to exchange")
+                    continue
+
+                exchanging_item = input()
+                if exchanging_item in list(environment.INSTRUMENTS.keys()):
+                    dwarf.inventory.extract_item(environment.BLOCKS['Worked Gold'])
+                    dwarf.inventory.put_item(exchanging_item)
+                    env.update_dwarf(dwarf_name, dwarf)
+
+            if is_finished:
+                if not is_mine_area_used:
+                    if dwarf.doing_command[:4:] == 'Mine':
+                        mine_area(dwarf_name, dwarf.coords1, dwarf.coords2, env)
+                        env.update_dwarf(dwarf_name, dwarf)
+                
+                if not is_throw_used:
+                    if dwarf.doing_command[:5:] == 'Throw':
+                        throw_area(dwarf_name, dwarf.dump_coords1, dwarf.dump_coords2, env)
+                        env.update_dwarf(dwarf_name, dwarf)
+
+                if not is_move_used:
+                    if dwarf.doing_command == 'Move':
+                        move(dwarf_name, dwarf.destination_coords, env)
+                        env.update_dwarf(dwarf_name, dwarf)
+                
+                break
+
+            if not command_exists:
+                print('Type the command correctly')
+                continue
+        
+        dwarf.fight(env)
+        env.update_dwarf(dwarf_name, dwarf)
+    
+    env.timer += 1

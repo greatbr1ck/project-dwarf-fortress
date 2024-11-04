@@ -84,6 +84,40 @@ class Inventory:
             return not self.is_filled() and (self.contains(environment.INSTRUMENTS['Wooden Pickaxe']) or self.contains(environment.INSTRUMENTS['Stone Pickaxe']))
         else:
             return not self.is_filled() and self.contains(environment.INSTRUMENTS['Stone Pickaxe'])
+    
+    def is_garbage_thrown(self):
+        for c in self.content:
+            if c.is_garbage:
+                return False
+        return True
+
+    def throw_next(self):
+        content_updated = []
+
+        for i in range(self.max_size):
+            if self.content[i].is_garbage:
+                index = i
+                res = self.content[i]
+        
+        for i in range(self.max_size):
+            if i != index:
+                content_updated.append(self.content[i])
+
+        self.content = content_updated
+        return res.name
+
+    def extract_item(self, item):
+        content_updated = []
+
+        for i in range(self.max_size):
+            if self.content[i].name == item and not self.content[i].is_garbage:
+                index = i
+        
+        for i in range(self.max_size):
+            if i != index:
+                content_updated.append(self.content[i])
+
+        self.content = content_updated
 
 class Dwarf:
     '''class representing dwarf characters'''
@@ -116,14 +150,24 @@ class Dwarf:
         #dwarf name
         self.name = name
 
-        #dwarf coords - turple of (z, x, y)
+        #dwarf coords - turple of (level, row, col)
         self.coords = coords
 
         self.inventory.put_item(environment.INSTRUMENTS['Wooden Pickaxe'])
 
-    #флаг, который говорит, что именно сейчас делает дварф (делает ли какую-то выданную ему ранее команду и еще не закончил)
-    #если этот флаг выставлен (то есть дварф еще делает дело, doing_command != none), и ему поступила новая команда, он бросит выполнение старой #команды
+    #is dwarf doing any long-period activity
     doing_command = 'Nothing'
+
+    #destination coords where dwarf moves if doing command == 'Move'
+    destination_coords = (1, -1, -1)
+
+    #coords of mining area
+    coords1 = (1, -1, -1)
+    coords2 = (1, -1, -1)
+
+    #coords of dump area
+    dump_coords1 = (1, -1, -1)
+    dump_coords2 = (1, -1, -1)
 
     #where the dwarf sees - <North, West, East, South>
     direction = 'North'
@@ -133,11 +177,10 @@ class Dwarf:
 
     #get what darf sees
     def get_visibility(self, env):
-      game_field = env.field
       if self.coords[0] == 1:
           game_field = env.dungeon
 
-      visible = [[environment.KINDS_OF_FIELD_TILES['Unknown']] * (self.radius_to_see * 2 + 3) for _ in range(2 * self.radius_to_see + 3)]
+      visible = [[environment.KINDS_OF_DUNGEON_TILES['Unknown']] * (self.radius_to_see * 2 + 3) for _ in range(2 * self.radius_to_see + 3)]
       (row, col) = self.coords[1:]
 
       q = []
@@ -156,7 +199,6 @@ class Dwarf:
                   visible[rrow + step[0]][ccol + step[1]] = game_field[r][c]
       
       return visible
-
 
     #show what dwarf sees
     def show_visibility(self, env):
@@ -228,17 +270,8 @@ class Dwarf:
 
     #move to tile with given coords
     def move(self, coords, env):
-        self.doing_command = 'Move'   
-
         if self.coords[1:] == coords:
-            self.doing_command = 'Nothing'
             return
-
-        #установить doing_command = move - может луше эту метку не тут выставлять, а откуда вызывается move в цекле?
-        #вызовется функция для поиска кратчайшего пути между текущей координатой и заданной
-        #за 1 такт дварф будет двигаться вдоль этого пути до цели
-        #пока установлен doing_command, надо откуда-то (предположительно сделать функцию behaviour,
-        #в которой будет делаться то, что пользователь не указал непосредственно в текущем ходу)
 
         visible = self.get_visibility(env)
        
@@ -324,28 +357,41 @@ class Dwarf:
             else:
                 self.inventory.put_item(environment.BLOCKS['Worked Stone'])
 
-    #собрать вещь с названием name из сундука с координатами chest_coords
-    def take_from_chest(self, name, chest_coords):
-      pass
+    #throw next garbage item from inventory
+    def throw(self, tile_coords, env):
+        if env.dungeon[tile_coords[1]][tile_coords[2]] != environment.KINDS_OF_DUNGEON_TILES['Cave']:
+            return
+                
+        tile = self.inventory.throw_next()
+        env.dungeon[tile_coords[1]][tile_coords[2]] = tile
+        env.update_dwarf(self.name, self)        
 
-    #выкинуть вещи, помеченные как мусор из инвентаря в область, заданную двумя углами coords1, coords2
-    def throw(self, coords1, coords2):
-      pass
+    #build one Worked Stone block behind the dwarf
+    def build(self, env):
+        if not self.inventory.contains(environment.BLOCKS['Worked Stone']):
+            print("There is no Worked Stone blocks in dwarf's inventory")
+            return
+        
+        (row, col) = (self.radius_to_see, self.radius_to_see)
+        if self.direction == 'North':
+            row -= 1
+        elif self.direction == 'South':
+            row += 1
+        elif self.direction == 'West':
+            col -= 1
+        else:
+            col += 1
+        
+        if env.dungeon[row][col] == environment.KINDS_OF_DUNGEON_TILES['Cave']:
+            env.dungeon[row][col] = environment.KINDS_OF_DUNGEON_TILES['Worked Stone']
 
-    #поставить 1 блок перед собой
-    def build(self):
-      pass
+        self.inventory.extract_item(environment.KINDS_OF_DUNGEON_TILES['Worked Stone'])
+        env.update_dwarf(self.name, self)
+    
+    #mark the item as garbage
+    def mark_garbage(self, item):
+        if not self.inventory.contains(item):
+            print("The dwarf's inventory does not contain this particular item")
+            return
 
-    #добыть руду в области, заданной углами coords1, coords2
-    # def mine(self, coords1, coords2):
-    #   pass
-
-    #добыть камень в области, заданной углами coords1, coords2
-    def dig(self, coords1, coords2):
-      pass
-
-    #срубить деревья в области, заданной углами coords1, coords2
-    def cut_down(self, coords1, coords2):
-      pass
-
-    #функции для передвижения на 1 тайл вправо/влево/вперед/назад
+        self.inventory.mark_garbage(item)
