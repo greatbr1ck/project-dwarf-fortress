@@ -1,6 +1,5 @@
 #!/usr/bin/python
 
-import heapq
 import environment
 
 INF = environment.SIZE_OF_FIELD * environment.SIZE_OF_FIELD + 1
@@ -121,6 +120,9 @@ class Inventory:
 
 class Dwarf:
     '''class representing dwarf characters'''
+
+    #race
+    race = 'dwarf'
     
     #radius of field/dungeon that dwarf can see
     radius_to_see = 3
@@ -175,7 +177,7 @@ class Dwarf:
     #map of dungeon where dwarf saw 'Cave' type tiles
     caves_map = [[environment.KINDS_OF_DUNGEON_TILES['Unknown']] * environment.SIZE_OF_FIELD for _ in range(environment.SIZE_OF_FIELD)]
 
-    #get what darf sees
+    #get what dwarf sees
     def get_visibility(self, env):
       if self.coords[0] == 1:
           game_field = env.dungeon
@@ -227,9 +229,11 @@ class Dwarf:
         for step in ((-1, -1), (-1, 0), (0, -1), (1, 0), (0, 1), (1, 1)):
             r = row + step[0]
             c = col + step[1]
-            if 0 <= r and r < environment.SIZE_OF_FIELD and 0 <= c and c < environment.SIZE_OF_FIELD and env.dungeon[r][c] == 'D':
+            if 0 <= r and r < environment.SIZE_OF_FIELD and 0 <= c and c < environment.SIZE_OF_FIELD and env.dungeon[r][c] in {'D', 'G'}:
                 #in future: G, not D. Now dwarfs attack dwarfs
                 damage = self.get_damage()
+                if self.profession == 'Healer':
+                    damage = 1
                 entities[1][r][c].hit(damage, env)
 
     #hit with damage

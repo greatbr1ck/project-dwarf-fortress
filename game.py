@@ -3,7 +3,7 @@
 import random
 import environment
 import dwarfs
-
+import goblins
 
 def get_initial_dwarf_coords(number_of_dwarfes):
     initial_dwarf_coords = []
@@ -62,6 +62,8 @@ def fill_area(field, start, color, radius):
     return field
 
 def generate_dungeon(initial_coords):
+    goblins_list = []
+
     #generate stone slice
     game_field = [[environment.KINDS_OF_DUNGEON_TILES["Stone"]] * environment.SIZE_OF_FIELD for _ in range(environment.SIZE_OF_FIELD)]
 
@@ -79,6 +81,7 @@ def generate_dungeon(initial_coords):
             col = random.randint(0, environment.SIZE_OF_FIELD - 1)
             local_field[row][col] = environment.KINDS_OF_DUNGEON_TILES["Cave"]
             caves_center.append((row, col))
+            goblins_list.append(goblins.Goblin((row, col)))
         
         caves_center.append((initial_coords[0][1], initial_coords[0][2]))
         
@@ -138,6 +141,11 @@ def generate_dungeon(initial_coords):
     for coord in initial_coords:
         game_field[coord[1]][coord[2]] = 'D'
 
+    #set goblins positions
+    for goblin in goblins_list:
+        (row, col) = goblin.coords
+        game_field[row][col] = 'G'
+
     return game_field
     
 
@@ -177,6 +185,14 @@ def init_game():
     #generate environment
     env = environment.Environment(dwarfes_list)
     env.dungeon = generate_dungeon(initial_coords)
+
+    goblins_list = []
+    for i in range(environment.SIZE_OF_FIELD):
+        for j in range(environment.SIZE_OF_FIELD):
+            if env.dungeon[i][j] == 'G':
+                goblins_list.append(goblins.Goblin((1, i, j)))
+    
+    env.goblins_list = goblins_list
     
     # print("DUNGEON")
     # for _ in env.dungeon:
@@ -184,7 +200,7 @@ def init_game():
     #         print(c, end='')
     #     print()
 
-    # return env
+    return env
 
 #functions for user
 
@@ -647,6 +663,8 @@ BUY_COMMANDS = dict([('Buy for gold', 'g')])
 
 env = init_game()
 while True:
+    i = int(input())
+
     used_dwarfs = set()
 
     for i in range(len(env.dwarfs_list)):
@@ -796,15 +814,18 @@ while True:
                     is_finished = True
                     command_exists = True
             for c in list(BUY_COMMANDS.keys()):
-                if not dwarf.inventory.contains(environment.BLOCKS['Worked Gold']):
-                    print("There is not gold in dwarf's inventory to exchange")
-                    continue
+                if BUY_COMMANDS[c] == command:
+                    command_exists = True
 
-                exchanging_item = input()
-                if exchanging_item in list(environment.INSTRUMENTS.keys()):
-                    dwarf.inventory.extract_item(environment.BLOCKS['Worked Gold'])
-                    dwarf.inventory.put_item(exchanging_item)
-                    env.update_dwarf(dwarf_name, dwarf)
+                    if not dwarf.inventory.contains(environment.BLOCKS['Worked Gold']):
+                        print("There is not gold in dwarf's inventory to exchange")
+                        continue
+
+                    exchanging_item = input()
+                    if exchanging_item in list(environment.INSTRUMENTS.keys()):
+                        dwarf.inventory.extract_item(environment.BLOCKS['Worked Gold'])
+                        dwarf.inventory.put_item(exchanging_item)
+                        env.update_dwarf(dwarf_name, dwarf)
 
             if is_finished:
                 if not is_mine_area_used:
@@ -832,3 +853,6 @@ while True:
         env.update_dwarf(dwarf_name, dwarf)
     
     env.timer += 1
+    for goblin in env.goblins_list:
+        goblin.move(env)
+        goblin.fight(env)

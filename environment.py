@@ -5,7 +5,7 @@ KINDS_OF_DUNGEON_TILES = dict([('Unknown', 'F'), ('Cave', ' '), ('Coal', '+'), (
 KINDS_OF_DWARFES_PROFESSIONS = {'Warrior', 'Healer'}
 DIRECTIONS = dict([('North', 0), ('South', 1), ('West', 2), ('East', 3)])
 
-INSTRUMENTS = dict([('Stone Pickaxe', 'T'), ('Wooden Pickaxe', '7'), ('Axe', 'P'), ('Wooden Stick', '/'), ('')])
+INSTRUMENTS = dict([('Stone Pickaxe', 'T'), ('Wooden Pickaxe', '7'), ('Axe', 'P'), ('Wooden Stick', '/')])
 BLOCKS = dict([('Worked Stone', 'O'), ('Worked Iron', '#'), ('Worked Gold', '$'), ('Coal', '*')])
 
 #SIZE_OF_FIELD = 1000
@@ -35,6 +35,9 @@ class Environment:
     #list of all alive-dwarfs class examples
     dwarfs_list = []
 
+    #list of all alive-goblins class examples
+    goblins_list = []
+
     #entities list provides access to any character class example by its coords
     #level 0 stands for field, level 1 stands for dungeon
     entities = [[['None'] * SIZE_OF_FIELD for _ in range(SIZE_OF_FIELD)] for i in range(2)]
@@ -45,7 +48,11 @@ class Environment:
         for entity in entities_list:
             (level, row, col) = entity.coords
             self.entities[level][row][col] = entity
-            self.dwarfs_list.append(entity)
+
+            if entity.race == 'dwarf':
+                self.dwarfs_list.append(entity)
+            else:
+                self.goblins_list.append(entity)
 
     def dwarf_exists(self, name):
         for dwarf in self.dwarfs_list:
