@@ -37,16 +37,19 @@
 Таким образом, вот команды, доступные игроку:
 
 повороты направления:
+
 w #повернуться лицом к северу
 a #повернуться лицом к западу
 s #повернуться лицом к югу
 d #повернуться лицом к востоку
 
 движение:
+
 mv
 row col #row, col - целочисленные коодинаты строчки и столбца клетки назначения
 
 добыча:
+
 mn #добыть блок перед собой
 
 mna
@@ -54,14 +57,17 @@ row1 col1
 row2 col2 #Добыть область. row1, col1, row2, col2 - есть целочисленные координаты левого верхнего и правого нижнего углов, задающих область #добычи
 
 информация:
+
 inf #показать общую информацию
 map #показать карту пещер
 inv #показать инвентарь
 
 постройка:
+
 b #поставить блок обработанного камня перед собой
 
 выброс мусора:
+
 mk
 name #пометить блок с названием name в инвентаре как мусор
 
@@ -70,13 +76,16 @@ row1 col1
 row2 col2 #Выкинуть мусор в область. row1, col1, row2, col2 - есть целочисленные координаты левого верхнего и правого нижнего углов, задающих #область
 
 завершение хода:
+
 f #игрок печает f, чтобы закончить ход данного дварфа
 
 покупка (обмен):
+
 g
 name #получить инструмент с названием name, если это корректно, в обмен на 1 слиток золота
 
 лечение:
+
 h
 name #может быть вызвана только от дварфа-целителя. name - имя дварфа, которому данный дварф дает здоровье, при наличии 1 золотого слитка
 
@@ -163,21 +172,27 @@ class Environment:
 
     def __init__(self, entities_list):
         #инициализация списком экземпляров
+        pass
     
     #добавить гоблинов в entities. Нужна в связи с сложным построением поля
     def update_entities(self):
+        pass
 
     #существует ли живой дварф с таким именем
     def dwarf_exists(self, name):
+        pass
 
     #получить экземпляр класса дварфа по данному имени дварфа
     def get_dwarf(self, name):
+        pass
     
     #изменить объект дварфа, соответствующего данному имени, внутри entities (так чтобы всем остальным экземплярам стало видно)
     def update_dwarf(self, name, updating_dwarf):
+        pass
 
     #получить экземпляр класса по координатам персонажа
     def get_entity(self, coords):
+        pass
 
 <h3>Дварфы</h3>
 
@@ -207,33 +222,43 @@ class Inventory:
     
     #полон ли инвентарь
     def is_filled(self):
+        pass
    
     #пометить вещь как мусор
     def mark_garbage(self, name):
+        pass
     
     #показать инвентарь
     def show_items(self):
+        pass
 
     #выкинуть весь мусор
     def throw_garbage(self):
+        pass
     
     #содержит ли инвентарь вещь с таким именем
     def contains(self, item_name):
+        pass
   
     #положить вещь в инвентарь 
     def put_item(self, item_name):
+        pass
     
     #можно ли добыть тайл, используя вещи в инвентаре
     def can_mine_item(self, item):
+        pass
 
     #выкинут ли мусор
     def is_garbage_thrown(self):
+        pass
 
     #выкинуть еще один мусорный предмет
     def throw_next(self):
+        pass
 
     #убрать предмет из инвентаря (не обязательно мусорный)
     def extract_item(self, item):
+        pass
 
 #дварфы
 class Dwarf:
@@ -290,36 +315,47 @@ class Dwarf:
 
     #получить область видимости
     def get_visibility(self, env):
+        pass
 
     #показать область видимости
     def show_visibility(self, env):
+        pass
     
     #наносимый врагам урон
     def get_damage(self):
+        pass
 
     #атаковать врагов
     def fight(self, env):
+        pass
 
     #пострадать (получить урон в бою)
     def hit(self, damage, environment):
+        pass
 
     #умереть (дварфы могут умирать в бою)
     def die(self, environment):
+        pass
 
     #передвинуться в сторону заданных координат
     def move(self, coords, env):
+        pass
 
     #добыть тайл с заданными координатами
     def mine(self, tile_coords, env):
+        pass
 
     #выкинуть мусор из инвентаря
     def throw(self, tile_coords, env):
+        pass
     
     #поставить 1 блок Обработанного Камня перед собой
     def build(self, env):
+        pass
 
     #отметить как мусор вещь из инвентаря
     def mark_garbage(self, item):
+        pass
 
 <h3>Гоблины</h3>
 #!/usr/bin/python
@@ -355,77 +391,99 @@ class Goblin:
     
     #get the damage value 
     def get_damage(self):
-  
+        pass
+
     #attack enemies
     def fight(self, env):
+        pass
 
     #hit with damage
     def hit(self, damage, environment):
+        pass
 
     #die
     def die(self, environment):
+        pass
     
     #move
     def move(self, env):
-
+        pass
 
 <h2>Функции</h2>
 
 #получить список координат дварфов (где они заспавнились при создании мира)
 def get_initial_dwarf_coords(number_of_dwarfes):
+    pass
 
 #заполнение области цветом - нужно при генерации поля по слоям
 def fill_area(field, start, color, radius):
+    pass
 
 #генерация подземелья - игрового поля
 def generate_dungeon(initial_coords):
+    pass
 
 #иниациализация игры
 def init_game():
+    pass
 
 #функции для пользователя
 
 #inf
 def get_dwarf_info(dwarf_name, env):
+    pass
 
 #inv
 def show_dwarf_inventory(dwarf_name, env):
+    pass
 
 #map
 def get_map(dwarf_name, env):
+    pass
 
 #mv
 def move(dwarf_name, destination_coords, env):
+    pass
 
 #mn
 def mine(dwarf_name, env):
+    pass
 
 #mna
 def mine_area(dwarf_name, coords1, coords2, env):
+    pass
 
 #вспомогательная функция для t - выкинуть 1 мусорный элемент перед собой
 def throw(dwarf_name, env):
+    pass
 
 #повернуться на 180 градусов
 def turn_around(dwarf_name, env):
+    pass
 
 #t
 def throw_area(dwarf_name, coords1, coords2, env):
+    pass
 
 #b
 def build_block(dwarf_name, env):
+    pass
 
 #mk
 def mark_as_garbage(dwarf_name, item_name, env):
+    pass
 
 #h
 def heal(dwarf_name, other_name):
-
+    pass
+  
 #help - получить подсказки по используемым игроком коммандам
 def help():
+    pass
 
 #describe - получить подсказки по значениям символов на поле и в инвентаре
 def describe():
+    pass
 
 #инициализировать игру
 env = init_game()
