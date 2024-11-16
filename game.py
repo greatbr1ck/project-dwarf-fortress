@@ -722,6 +722,22 @@ def help():
     print(BUY_COMMANDS['Buy for gold'])
     print("name #where name is the name of any single instrument mentioned higher")
 
+def describe():
+    print("field symbols:")
+    for key in list(environment.KINDS_OF_DUNGEON_TILES.keys()):
+        print(environment.KINDS_OF_DUNGEON_TILES[key], "stands for", key)
+    print()
+    
+    print("inventory symbols")
+    for key in list(environment.INSTRUMENTS.keys()):
+        print(environment.INSTRUMENTS[key], "stands for", key)
+    for key in list(environment.BLOCKS.keys()):
+        print(environment.BLOCKS[key], "stands for", key)
+    print()
+
+    print("G stands for goblin")
+    print("D stands for dwarf")
+
 
 print('''
     Welcome to the world of dwarf and goblins!\n
@@ -735,7 +751,8 @@ print('''
     As you have formed the dwarf squad, the game starts:
     On each stage you have to make a move for each alive dwarf.
     Type the name of any alive dwarf and type the command you want him to do.
-    After that finish the move for this particular dwarf by the command 'f'
+    After that finish the move for this particular dwarf by the command 'f'.
+    If you dont remember what any simbol of field or inventory means, you can type "describe"
     ''')
 
 while True:
@@ -768,6 +785,21 @@ while True:
 
             command_exists = False
             is_finished = False
+
+            if command == "describe":
+                describe()
+                command_exists = True
+
+            if command == "help":
+                help()
+                command_exists = True
+
+            if command == "D":
+                for _ in env.dungeon:
+                    for c in _:
+                        print(c, end='')
+                    print()
+                command_exists = True    
 
             for c in tuple(TURN_COMMANDS.keys()):
                 if TURN_COMMANDS[c] == command:
