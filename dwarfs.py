@@ -330,7 +330,6 @@ class Dwarf:
         
         (row, col) = self.coords[1:]
         (next_row, next_col) = coords
-        print("EEEEE")
         
         if (next_row, next_col) != (row, col):  
             if dist[next_row][next_col] < INF:
@@ -338,7 +337,6 @@ class Dwarf:
                     (next_row, next_col) = parent[next_row][next_col]
             else:
                 (next_row, next_col) = (row, col)
-        print(next_row, next_col)
           
         if next_row == row - 1:
             self.direction = 'North'
