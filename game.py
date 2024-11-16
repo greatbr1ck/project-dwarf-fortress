@@ -152,14 +152,24 @@ def generate_dungeon(initial_coords):
 def init_game():
     #get dwarfes list
     print('type the population of your dwarf squad')
-
-    number_of_dwarfes = int(input())
+    
+    s = input()
     while True:
+        is_number = True
+        for c in s:
+            if not c in '0123456789':
+                is_number = False
+        if not is_number:
+            print('Error! Dwarfs population must be an integer value')
+            s = input()
+            continue
+
+        number_of_dwarfes = int(s)
         if 1 <= number_of_dwarfes and number_of_dwarfes <= environment.SIZE_OF_FIELD * environment.SIZE_OF_FIELD:
             break
 
-        print('please type the population of dwarfs in the correct way')
-        number_of_dwarfes = int(input())
+        print('Error! Dwarfs population must be greater than 0 and no greater than', environment.SIZE_OF_FIELD * environment.SIZE_OF_FIELD)
+        s = input()
 
     initial_coords = get_initial_dwarf_coords(number_of_dwarfes)
 
@@ -168,13 +178,16 @@ def init_game():
         print('type another dwarfs name')
         name = input()
 
-        print('type the dwarfs work responsibility')
+        print('type the dwarfs work responsibility ("Warrior" or "Healer")')
         profession = input()
         while True:
+            profession = profession.lower()
+            profession = chr(ord(profession[0]) - 32) + profession[1::]
+
             if profession in environment.KINDS_OF_DWARFES_PROFESSIONS:
                 break
 
-            print('please type the dwarfs work responsibility in the correct way')
+            print('please type "Warrior" or "Healer"')
             profession = input()
 
         coords = initial_coords[i]
@@ -194,11 +207,11 @@ def init_game():
     
     env.goblins_list = goblins_list
     
-    # print("DUNGEON")
-    # for _ in env.dungeon:
-    #     for c in _:
-    #         print(c, end='')
-    #     print()
+    print("DUNGEON")
+    for _ in env.dungeon:
+        for c in _:
+            print(c, end='')
+        print()
 
     return env
 
@@ -661,13 +674,75 @@ THROW_COMMANDS = dict([('Mark as garbage', 'mk'), ('Throw', 't')])
 FINISH_COMMANDS = dict([('Move on to another dwarf', 'f')])
 BUY_COMMANDS = dict([('Buy for gold', 'g')])
 
-env = init_game()
-while True:
-    i = int(input())
+def help():
+    print("You can turn dwarf's direction as much as you want in any single move")
+    for key in TURN_COMMANDS:
+        print('if you want to', key, 'you should type:', TURN_COMMANDS[key])
+    print()
 
+    print("You can move a dwarf to any cell of a field with coords (coords.row, coords.column) by typing: ")
+    print(MOVE_COMMANDS['Move'])
+    print('row col #where row and col are integer numbers in 0..', environment.SIZE_OF_FIELD, sep='')
+    print()
+
+    print("Dwarf can mine a tile in front of him by typing: ", MINE_COMMANDS['Mine'])
+    print()
+
+    print("Dwarf can mine an area with left high corner (coords1.row, coords1.column) and right low corner (coords2.row, coords2.column) by typing: ")
+    print(MINE_COMMANDS['Mine Area'])
+    print("row1 col1 row2 col2 #where row1, 2 and col1, 2 are integer numbers in 0..", environment.SIZE_OF_FIELD, " and are the corners of area mentioned higher", sep='')
+    print()
+
+    print("You can see dwarf's inventory by typing: ", INFO_COMMANDS['Show Inventory'])
+    print()
+
+    print("You can see what dwarf remembers about the parts of field it is possible to go by typing: ", INFO_COMMANDS['Get Map'])
+    print()
+
+    print("Yoou can see basic information abiut this particular dwarfs by typing", INFO_COMMANDS['Get Info'])
+    print()
+
+    print("Dwarf can build a Worked Stone block in front of him if the tile in front of him is empty by typing: ", BUILD_COMMANDS['Build'])
+    print()
+
+    print("You can mark the things of dwarfs inventory as a garbage to throw later by typing: ")
+    print(THROW_COMMANDS['Mark as garbage'])
+    print("name #where name is 'Worked Stone', 'Worked Iron', 'Worked Gold' or 'Coal'")
+    print()
+
+    print("Dwarf can throw all marked as garbage from his inventory in an area with left high corner (coords1.row, coords1.column) and right low corner (coords2.row, coords2.column) by typing:")
+    print(THROW_COMMANDS['Throw'])
+    print("row1 col1 row2 col2 #where row1, 2 and col1, 2 are integer numbers in 0..", environment.SIZE_OF_FIELD, " and are the corners of area mentioned higher", sep='')
+    print()
+    
+    print("You can finish playing for this particular dwarf on this particular game move by typing: ", FINISH_COMMANDS['Move on to another dwarf'])
+    print()
+
+    print("Dwarf can exchange one Worked Gold item from his inventory for one particular item from from <'Stone Pickaxe', 'Wooden Pickaxe', 'Axe', 'Wooden Stick'> by typing:")
+    print(BUY_COMMANDS['Buy for gold'])
+    print("name #where name is the name of any single instrument mentioned higher")
+
+
+print('''
+    Welcome to the world of dwarf and goblins!\n
+    !!!Type "help" whenever you want to know the commands you can use playing for dwarfs!!!
+    First, you should form a dwarf squad.
+      ''')
+
+env = init_game()
+
+print('''
+    As you have formed the dwarf squad, the game starts:
+    On each stage you have to make a move for each alive dwarf.
+    Type the name of any alive dwarf and type the command you want him to do.
+    After that finish the move for this particular dwarf by the command 'f'
+    ''')
+
+while True:
     used_dwarfs = set()
 
     for i in range(len(env.dwarfs_list)):
+        print("Type the name of alive dwarf you have not played for in this particular move")
         dwarf_name = input()
 
         while True:
@@ -688,6 +763,7 @@ while True:
         is_throw_used = False
 
         while True:
+            print("Type another command to do")
             command = input()
 
             command_exists = False
