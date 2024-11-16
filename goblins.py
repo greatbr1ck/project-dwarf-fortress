@@ -62,7 +62,7 @@ class Goblin:
 
     #attack enemies
     def fight(self, env):
-        f = False
+        attacked = False
 
         (row, col) = self.coords[1:]
         for step in ((-1, 0), (0, -1), (1, 0), (0, 1), (-1, -1), (-1, 1), (1, -1), (1, 1)):
@@ -71,9 +71,9 @@ class Goblin:
             if 0 <= r and r < environment.SIZE_OF_FIELD and 0 <= c and c < environment.SIZE_OF_FIELD and env.dungeon[r][c] == 'D':
                 damage = self.get_damage()
                 env.entities[1][r][c].hit(damage, env)
-                f = True
+                attacked = True
         
-        if f:
+        if attacked:
             print("Goblin at: ", self.coords[1], self.coords[2])
             print("Health: ", self.health)
             print()

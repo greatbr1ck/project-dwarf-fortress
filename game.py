@@ -140,10 +140,10 @@ def generate_dungeon(initial_coords):
     #set dwarfes positions
     for coord in initial_coords:
         game_field[coord[1]][coord[2]] = 'D'
-        game_field[coord[1] - 1][coord[2]] = 'G'
+        
+        #for checker - useful tu uncomment while checking the fight process
+        #game_field[coord[1] - 1][coord[2]] = 'G'
         game_field[coord[1]][coord[2] - 1] = 'G'
-        
-        
 
     #set goblins positions
     for goblin in goblins_list:
@@ -151,7 +151,6 @@ def generate_dungeon(initial_coords):
         game_field[row][col] = 'G'
 
     return game_field
-    
 
 def init_game():
     #get dwarfes list
@@ -199,6 +198,8 @@ def init_game():
         dwarf = dwarfs.Dwarf(profession, name, coords)
         dwarfes_list.append(dwarf)
         print("! ", dwarf.name)
+        for c in dwarf.inventory.content:
+            print(c.name)
 
     #generate environment
     env = environment.Environment(dwarfes_list)
@@ -669,6 +670,21 @@ def mark_as_garbage(dwarf_name, item_name, env):
     dwarf.mark_garbage(item_name)
     env.update_dwarf(dwarf_name, dwarf)
 
+def heal(dwarf_name, other_name):
+    dwarf = env.get_dwarf(dwarf_name)
+    other = env.get_dwarf(other_name)
+
+    if not dwarf.inventory.contains(environment.BLOCKS['Worked Gold']):
+        print("Dwarf", dwarf_name, "cannot heal another dwarf due to the lack of gold")
+        return
+
+    dwarf.inventory.extract_item(environment.BLOCKS['Worked Gold'])
+    other.health += 2
+    if other.health > other.max_health:
+        other.health= other.max_health
+    env.update_dwarf(dwarf_name, dwarf)
+    env.update_dwarf(other_name, other)
+
 
 #-------------------------------GAME-----------------------------
 
@@ -680,6 +696,7 @@ BUILD_COMMANDS = dict([('Build', 'b')])
 THROW_COMMANDS = dict([('Mark as garbage', 'mk'), ('Throw', 't')])
 FINISH_COMMANDS = dict([('Move on to another dwarf', 'f')])
 BUY_COMMANDS = dict([('Buy for gold', 'g')])
+HEAL_COMMANDS = dict([('Heal', 'h')])
 
 def help():
     print("You can turn dwarf's direction as much as you want in any single move")
@@ -814,7 +831,6 @@ while True:
                 dwarf.inventory.put_item(environment.BLOCKS['Worked Gold'])
                 command_exists = True    
 
-
             for c in tuple(TURN_COMMANDS.keys()):
                 if TURN_COMMANDS[c] == command:
                     command_exists = True
@@ -948,6 +964,17 @@ while True:
                         dwarf.inventory.extract_item(environment.BLOCKS['Worked Gold'])
                         dwarf.inventory.put_item(environment.INSTRUMENTS[exchanging_item])
                         env.update_dwarf(dwarf_name, dwarf)
+            
+            for c in list(HEAL_COMMANDS.keys()):
+                if HEAL_COMMANDS[c] == command:
+                    command_exists = True
+
+                    other_dwarf_name = input()
+                    if not env.dwarf_exists(other_dwarf_name):
+                        print("There is no dwarf named", other_dwarf_name, "in your dwarf squad")
+                        continue
+
+                    heal(dwarf_name, other_dwarf_name)
 
             if is_finished:
                 if not is_mine_area_used:
@@ -975,9 +1002,9 @@ while True:
         env.update_dwarf(dwarf_name, dwarf)
     
     env.timer += 1
-    for goblin in env.goblins_list:
-        goblin.fight(env)
-        goblin.move(env)
+    for i in range(len(env.goblins_list)):
+        env.goblins_list[i].fight(env)
+        env.goblins_list[i].move(env)
 
     if len(env.dwarfs_list) == 0:
         print("All your dwarfs were killed... Game over")

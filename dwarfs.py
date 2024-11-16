@@ -17,7 +17,7 @@ class Thing:
         self.name = name
 
         if name in {environment.INSTRUMENTS['Wooden Pickaxe'], environment.INSTRUMENTS['Stone Pickaxe']}:
-            self.damage = 1
+            self.damage = 2
         elif name == environment.INSTRUMENTS['Axe']:
             self.damage = 3
 
@@ -28,11 +28,12 @@ class Inventory:
     #max size
     max_size = 20
 
-    #inventory content
-    content = []
-
-    #size of filled part
-    size = 0
+    def __init__(self):
+        #inventory content
+        self.content = []
+        
+        #size of filled part
+        self.size = 0
     
     #show if there is any empty place
     def is_filled(self):
@@ -154,7 +155,7 @@ class Dwarf:
 
         #dwarf coords - turple of (level, row, col)
         self.coords = coords
-
+        self.inventory = Inventory()
         self.inventory.put_item(environment.INSTRUMENTS['Wooden Pickaxe'])
 
     #is dwarf doing any long-period activity
@@ -179,28 +180,27 @@ class Dwarf:
 
     #get what dwarf sees
     def get_visibility(self, env):
-      if self.coords[0] == 1:
-          game_field = env.dungeon
+        game_field = env.dungeon
 
-      visible = [[environment.KINDS_OF_DUNGEON_TILES['Unknown']] * (self.radius_to_see * 2 + 3) for _ in range(2 * self.radius_to_see + 3)]
-      (row, col) = self.coords[1:]
+        visible = [[environment.KINDS_OF_DUNGEON_TILES['Unknown']] * (self.radius_to_see * 2 + 3) for _ in range(2 * self.radius_to_see + 3)]
+        (row, col) = self.coords[1:]
 
-      q = []
-      q.append((row, col, self.radius_to_see, self.radius_to_see, 0))
-      visited = [[False] * len(visible) for _ in range(len(visible))]
-      visited[self.radius_to_see][self.radius_to_see] = True
-      visible[self.radius_to_see][self.radius_to_see] = 'D'
+        q = []
+        q.append((row, col, self.radius_to_see + 1, self.radius_to_see + 1, 0))
+        visited = [[False] * len(visible) for _ in range(len(visible))]
+        visited[self.radius_to_see + 1][self.radius_to_see + 1] = True
+        visible[self.radius_to_see + 1][self.radius_to_see + 1] = 'D'
 
-      while not len(q) == 0:
-          (row, col, rrow, ccol, dist) = q.pop(0)
-          for step in ((-1, 0), (0, -1), (1, 0), (0, 1)):
-              (r, c) = (row + step[0], col + step[1])
-              if dist + 1 <= self.radius_to_see and not visited[rrow + step[0]][ccol + step[1]] and 0 <= r and r < environment.SIZE_OF_FIELD and 0 <= c and c < environment.SIZE_OF_FIELD:
-                  q.append((r, c, rrow + step[0], ccol + step[1], dist + 1))
-                  visited[rrow + step[0]][ccol + step[1]] = True
-                  visible[rrow + step[0]][ccol + step[1]] = game_field[r][c]
-      
-      return visible
+        while not len(q) == 0:
+            (row, col, rrow, ccol, dist) = q.pop(0)
+            for step in ((-1, 0), (0, -1), (1, 0), (0, 1)):
+                (r, c) = (row + step[0], col + step[1])
+                if dist + 1 <= self.radius_to_see and not visited[rrow + step[0]][ccol + step[1]] and 0 <= r and r < environment.SIZE_OF_FIELD and 0 <= c and c < environment.SIZE_OF_FIELD:
+                    q.append((r, c, rrow + step[0], ccol + step[1], dist + 1))
+                    visited[rrow + step[0]][ccol + step[1]] = True
+                    visible[rrow + step[0]][ccol + step[1]] = game_field[r][c]
+        
+        return visible
 
     #show what dwarf sees
     def show_visibility(self, env):
@@ -217,6 +217,8 @@ class Dwarf:
         for instrument in self.inventory.content:
             if damage < instrument.damage:
                 damage = instrument.damage
+        if self.profession == 'Healer':
+            damage = 1
 
         return damage            
 
@@ -225,14 +227,12 @@ class Dwarf:
         '''dwarf attacks enemies when he sees them, that's why the user does not rules whether to attack or not. Fight may happen only in dungeon'''
 
         damage = self.get_damage()
-        if self.profession == 'Healer':
-            damage = 1
-        print("DAMAGE: ", damage)
+        
         (row, col) = self.coords[1:]
         for step in ((-1, 0), (0, -1), (1, 0), (0, 1), (-1, -1), (-1, 1), (1, -1), (1, 1)):
             r = row + step[0]
             c = col + step[1]
-            if 0 <= r and r < environment.SIZE_OF_FIELD and 0 <= c and c < environment.SIZE_OF_FIELD and env.dungeon[r][c] in {'D', 'G'}:
+            if 0 <= r and r < environment.SIZE_OF_FIELD and 0 <= c and c < environment.SIZE_OF_FIELD and env.dungeon[r][c] == 'G':
                 #in future: G, not D. Now dwarfs attack dwarfs
                 env.entities[1][r][c].hit(damage, env)
 
@@ -242,6 +242,10 @@ class Dwarf:
             self.health -= damage
         else:
             self.die(environment)
+        
+        print("Hit", self.name)
+        print("Health:", self.health)
+        print()
 
     #die
     def die(self, environment):
@@ -292,8 +296,7 @@ class Dwarf:
                 if self.coords[0] == 1 and 0 <= r and r < environment.SIZE_OF_FIELD and 0 <= c and c < environment.SIZE_OF_FIELD and \
                    (visible[i][j] in {'D', 'G', environment.KINDS_OF_DUNGEON_TILES['Cave'], environment.KINDS_OF_DUNGEON_TILES['Worked Stone']}):
                     self.caves_map[r][c] = environment.KINDS_OF_DUNGEON_TILES['Cave']
-                #сделать аналогичную caves_map штуку для наземного уровня
-
+        
         #find shortest path
         q = []
         q.append((row, col))
