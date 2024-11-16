@@ -62,15 +62,21 @@ class Goblin:
 
     #attack enemies
     def fight(self, env):
-        entities = env.entities
+        f = False
 
         (row, col) = self.coords[1:]
-        for step in ((-1, -1), (-1, 0), (0, -1), (1, 0), (0, 1), (1, 1)):
+        for step in ((-1, 0), (0, -1), (1, 0), (0, 1), (-1, -1), (-1, 1), (1, -1), (1, 1)):
             r = row + step[0]
             c = col + step[1]
             if 0 <= r and r < environment.SIZE_OF_FIELD and 0 <= c and c < environment.SIZE_OF_FIELD and env.dungeon[r][c] == 'D':
                 damage = self.get_damage()
-                entities[1][r][c].hit(damage, env)
+                env.entities[1][r][c].hit(damage, env)
+                f = True
+        
+        if f:
+            print("Goblin at: ", self.coords[1], self.coords[2])
+            print("Health: ", self.health)
+            print()
 
     #hit with damage
     def hit(self, damage, environment):
@@ -86,7 +92,7 @@ class Goblin:
             if g.coords != self.coords:
                 goblins_list.append(g)
         environment.goblins_list = goblins_list
-    
+        environment.entities[1][self.coords[1]][self.coords[2]] = 'None'
         environment.dungeon[self.coords[1]][self.coords[2]] = self.standing_tile
     
     #move
@@ -109,9 +115,10 @@ class Goblin:
             return
         
         (row, col) = ways[index]
-        print(index)
 
         env.dungeon[self.coords[1]][self.coords[2]] = self.standing_tile
+        env.entities[1][self.coords[1]][self.coords[2]] = 'None'
         self.coords = (self.coords[0], row, col)
         self.standing_tile = env.dungeon[row][col]
         env.dungeon[row][col] = 'G' 
+        env.entities[1][row][col] = self

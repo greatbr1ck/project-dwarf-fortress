@@ -19,7 +19,7 @@ class Thing:
         if name in {environment.INSTRUMENTS['Wooden Pickaxe'], environment.INSTRUMENTS['Stone Pickaxe']}:
             self.damage = 1
         elif name == environment.INSTRUMENTS['Axe']:
-            self.damage = 2
+            self.damage = 3
 
 
 class Inventory:
@@ -57,7 +57,7 @@ class Inventory:
     #through out all garbage
     def throw_garbage(self):
         content_updated = []
-        for i in range(self.max_size):
+        for i in range(self.size):
             if not self.content[i].is_garbage:
                 content_updated.append(self.content[i])
 
@@ -93,12 +93,12 @@ class Inventory:
     def throw_next(self):
         content_updated = []
 
-        for i in range(self.max_size):
+        for i in range(self.size):
             if self.content[i].is_garbage:
                 index = i
                 res = self.content[i]
         
-        for i in range(self.max_size):
+        for i in range(self.size):
             if i != index:
                 content_updated.append(self.content[i])
 
@@ -108,11 +108,11 @@ class Inventory:
     def extract_item(self, item):
         content_updated = []
 
-        for i in range(self.max_size):
+        for i in range(self.size):
             if self.content[i].name == item and not self.content[i].is_garbage:
                 index = i
         
-        for i in range(self.max_size):
+        for i in range(self.size):
             if i != index:
                 content_updated.append(self.content[i])
 
@@ -216,25 +216,25 @@ class Dwarf:
         damage = 1
         for instrument in self.inventory.content:
             if damage < instrument.damage:
-                damage < instrument.damage
+                damage = instrument.damage
 
         return damage            
 
     #attack enemies
     def fight(self, env):
-        '''dwarf attacks enemiees when he sees them, that's why the user does not rules whether to attack or not. Fight may happen only in dungeon'''
-        entities = env.entities
+        '''dwarf attacks enemies when he sees them, that's why the user does not rules whether to attack or not. Fight may happen only in dungeon'''
 
+        damage = self.get_damage()
+        if self.profession == 'Healer':
+            damage = 1
+        print("DAMAGE: ", damage)
         (row, col) = self.coords[1:]
-        for step in ((-1, -1), (-1, 0), (0, -1), (1, 0), (0, 1), (1, 1)):
+        for step in ((-1, 0), (0, -1), (1, 0), (0, 1), (-1, -1), (-1, 1), (1, -1), (1, 1)):
             r = row + step[0]
             c = col + step[1]
             if 0 <= r and r < environment.SIZE_OF_FIELD and 0 <= c and c < environment.SIZE_OF_FIELD and env.dungeon[r][c] in {'D', 'G'}:
                 #in future: G, not D. Now dwarfs attack dwarfs
-                damage = self.get_damage()
-                if self.profession == 'Healer':
-                    damage = 1
-                entities[1][r][c].hit(damage, env)
+                env.entities[1][r][c].hit(damage, env)
 
     #hit with damage
     def hit(self, damage, environment):
@@ -255,7 +255,7 @@ class Dwarf:
             if dwarf.name != self.name:
                 dwarfs_list.append(dwarf)
         environment.dwarfs_list = dwarfs_list
-
+        environment.entities[1][self.coords[1]][self.coords[2]] = 'None'
         environment.dungeon[self.coords[1]][self.coords[2]] = self.standing_tile
     
     '''
@@ -342,9 +342,11 @@ class Dwarf:
             self.direction = 'West'
         
         env.dungeon[self.coords[1]][self.coords[2]] = self.standing_tile
+        env.entities[1][self.coords[1]][self.coords[2]] = 'None'
         self.coords = (self.coords[0], next_row, next_col)
         self.standing_tile = env.dungeon[next_row][next_col]
         env.dungeon[next_row][next_col] = 'D' 
+        env.entities[1][next_row][next_col] = self
 
     #mine the tile with coords tile_coords
     def mine(self, tile_coords, env):

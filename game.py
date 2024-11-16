@@ -140,6 +140,10 @@ def generate_dungeon(initial_coords):
     #set dwarfes positions
     for coord in initial_coords:
         game_field[coord[1]][coord[2]] = 'D'
+        game_field[coord[1] - 1][coord[2]] = 'G'
+        game_field[coord[1]][coord[2] - 1] = 'G'
+        
+        
 
     #set goblins positions
     for goblin in goblins_list:
@@ -194,7 +198,8 @@ def init_game():
 
         dwarf = dwarfs.Dwarf(profession, name, coords)
         dwarfes_list.append(dwarf)
-    
+        print("! ", dwarf.name)
+
     #generate environment
     env = environment.Environment(dwarfes_list)
     env.dungeon = generate_dungeon(initial_coords)
@@ -206,6 +211,7 @@ def init_game():
                 goblins_list.append(goblins.Goblin((1, i, j)))
     
     env.goblins_list = goblins_list
+    env.update_entities()
     
     print("DUNGEON")
     for _ in env.dungeon:
@@ -228,6 +234,7 @@ def get_dwarf_info(dwarf_name, env):
     dwarf = env.get_dwarf(dwarf_name)
     print("work responsibility: ", dwarf.profession)
     print("health: ", dwarf.health)
+    print("damage:", dwarf.get_damage())
     print("is now doing: ", dwarf.doing_command)
     print("coords: ", dwarf.coords)
     print("direction", dwarf.direction)
@@ -699,7 +706,7 @@ def help():
     print("You can see what dwarf remembers about the parts of field it is possible to go by typing: ", INFO_COMMANDS['Get Map'])
     print()
 
-    print("Yoou can see basic information abiut this particular dwarfs by typing", INFO_COMMANDS['Get Info'])
+    print("You can see basic information abiut this particular dwarfs by typing", INFO_COMMANDS['Get Info'])
     print()
 
     print("Dwarf can build a Worked Stone block in front of him if the tile in front of him is empty by typing: ", BUILD_COMMANDS['Build'])
@@ -794,12 +801,19 @@ while True:
                 help()
                 command_exists = True
 
+            #command for checker - to see the whole field
             if command == "D":
                 for _ in env.dungeon:
                     for c in _:
                         print(c, end='')
                     print()
                 command_exists = True    
+
+            #command for checker - put one Worked Gold in dwarf's inventory
+            if command == "E":
+                dwarf.inventory.put_item(environment.BLOCKS['Worked Gold'])
+                command_exists = True    
+
 
             for c in tuple(TURN_COMMANDS.keys()):
                 if TURN_COMMANDS[c] == command:
@@ -932,7 +946,7 @@ while True:
                     exchanging_item = input()
                     if exchanging_item in list(environment.INSTRUMENTS.keys()):
                         dwarf.inventory.extract_item(environment.BLOCKS['Worked Gold'])
-                        dwarf.inventory.put_item(exchanging_item)
+                        dwarf.inventory.put_item(environment.INSTRUMENTS[exchanging_item])
                         env.update_dwarf(dwarf_name, dwarf)
 
             if is_finished:
@@ -962,5 +976,9 @@ while True:
     
     env.timer += 1
     for goblin in env.goblins_list:
-        goblin.move(env)
         goblin.fight(env)
+        goblin.move(env)
+
+    if len(env.dwarfs_list) == 0:
+        print("All your dwarfs were killed... Game over")
+        break

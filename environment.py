@@ -53,6 +53,11 @@ class Environment:
                 self.dwarfs_list.append(entity)
             else:
                 self.goblins_list.append(entity)
+    
+    def update_entities(self):
+        for g in self.goblins_list:
+            (level, row, col) = g.coords
+            self.entities[level][row][col] = g
 
     def dwarf_exists(self, name):
         for dwarf in self.dwarfs_list:
