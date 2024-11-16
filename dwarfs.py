@@ -42,7 +42,7 @@ class Inventory:
     #mark items of environment as a garbage to through out
     def mark_garbage(self, name):
         for i in range(len(self.content)):
-            if self.content[i].name == name:
+            if self.content[i].name == name and not self.content[i].is_garbage:
                 self.content[i].is_garbage = True
                 break
     
@@ -63,6 +63,7 @@ class Inventory:
                 content_updated.append(self.content[i])
 
         self.content = content_updated
+        self.size -= 1
     
     #find the item in content
     def contains(self, item_name):
@@ -92,19 +93,21 @@ class Inventory:
         return True
 
     def throw_next(self):
+        res = 'None'
         content_updated = []
 
         for i in range(self.size):
             if self.content[i].is_garbage:
                 index = i
-                res = self.content[i]
+                res = self.content[i].name
         
         for i in range(self.size):
             if i != index:
                 content_updated.append(self.content[i])
 
         self.content = content_updated
-        return res.name
+        self.size = len(self.content)
+        return res
 
     def extract_item(self, item):
         content_updated = []
@@ -284,8 +287,8 @@ class Dwarf:
         visible = self.get_visibility(env)
        
         (row, col) = self.coords[1:]
-        row_in_visible = self.radius_to_see
-        col_in_visible = self.radius_to_see
+        row_in_visible = self.radius_to_see + 1
+        col_in_visible = self.radius_to_see + 1
 
         #update caves_map
         for i in range(len(visible)):
@@ -327,6 +330,7 @@ class Dwarf:
         
         (row, col) = self.coords[1:]
         (next_row, next_col) = coords
+        print("EEEEE")
         
         if (next_row, next_col) != (row, col):  
             if dist[next_row][next_col] < INF:
@@ -334,6 +338,7 @@ class Dwarf:
                     (next_row, next_col) = parent[next_row][next_col]
             else:
                 (next_row, next_col) = (row, col)
+        print(next_row, next_col)
           
         if next_row == row - 1:
             self.direction = 'North'
@@ -363,7 +368,7 @@ class Dwarf:
                 self.inventory.put_item(environment.BLOCKS['Worked Gold'])
             elif tile == environment.KINDS_OF_DUNGEON_TILES['Iron']:
                 self.inventory.put_item(environment.BLOCKS['Worked Iron'])
-            else:
+            elif tile == environment.KINDS_OF_DUNGEON_TILES['Stone']:
                 self.inventory.put_item(environment.BLOCKS['Worked Stone'])
 
     #throw next garbage item from inventory
@@ -372,6 +377,9 @@ class Dwarf:
             return
                 
         tile = self.inventory.throw_next()
+        if tile == 'None':
+            return
+        
         env.dungeon[tile_coords[1]][tile_coords[2]] = tile
         env.update_dwarf(self.name, self)        
 
@@ -381,7 +389,7 @@ class Dwarf:
             print("There is no Worked Stone blocks in dwarf's inventory")
             return
         
-        (row, col) = (self.radius_to_see, self.radius_to_see)
+        (row, col) = (self.coords[1], self.coords[2])
         if self.direction == 'North':
             row -= 1
         elif self.direction == 'South':
@@ -390,11 +398,15 @@ class Dwarf:
             col -= 1
         else:
             col += 1
+
+        if not 0 <= row and row < environment.SIZE_OF_FIELD and 0 <= col and col < environment.SIZE_OF_FIELD:
+            print("Error! You want to build outside the game field!")
+            return
         
         if env.dungeon[row][col] == environment.KINDS_OF_DUNGEON_TILES['Cave']:
             env.dungeon[row][col] = environment.KINDS_OF_DUNGEON_TILES['Worked Stone']
+            self.inventory.extract_item(environment.KINDS_OF_DUNGEON_TILES['Worked Stone'])
 
-        self.inventory.extract_item(environment.KINDS_OF_DUNGEON_TILES['Worked Stone'])
         env.update_dwarf(self.name, self)
     
     #mark the item as garbage

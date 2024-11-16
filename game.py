@@ -79,6 +79,11 @@ def generate_dungeon(initial_coords):
         for i in range(caves_number):
             row = random.randint(0, environment.SIZE_OF_FIELD - 1)
             col = random.randint(0, environment.SIZE_OF_FIELD - 1)
+
+            while (1, row, col) in initial_coords:
+                row = random.randint(0, environment.SIZE_OF_FIELD - 1)
+                col = random.randint(0, environment.SIZE_OF_FIELD - 1)
+    
             local_field[row][col] = environment.KINDS_OF_DUNGEON_TILES["Cave"]
             caves_center.append((row, col))
             goblins_list.append(goblins.Goblin((row, col)))
@@ -143,7 +148,7 @@ def generate_dungeon(initial_coords):
         
         #for checker - useful tu uncomment while checking the fight process
         #game_field[coord[1] - 1][coord[2]] = 'G'
-        game_field[coord[1]][coord[2] - 1] = 'G'
+        #game_field[coord[1]][coord[2] - 1] = 'G'
 
     #set goblins positions
     for goblin in goblins_list:
@@ -197,9 +202,6 @@ def init_game():
 
         dwarf = dwarfs.Dwarf(profession, name, coords)
         dwarfes_list.append(dwarf)
-        print("! ", dwarf.name)
-        for c in dwarf.inventory.content:
-            print(c.name)
 
     #generate environment
     env = environment.Environment(dwarfes_list)
@@ -213,12 +215,6 @@ def init_game():
     
     env.goblins_list = goblins_list
     env.update_entities()
-    
-    print("DUNGEON")
-    for _ in env.dungeon:
-        for c in _:
-            print(c, end='')
-        print()
 
     return env
 
@@ -289,6 +285,10 @@ def move(dwarf_name, destination_coords, env):
 
 def mine(dwarf_name, env):
     dwarf = env.get_dwarf(dwarf_name)
+
+    if dwarf.inventory.is_filled():
+        print("Dwarf's inventory is filled")
+        return
 
     (row, col) = dwarf.coords[1:]
     if dwarf.direction == 'North':
@@ -511,6 +511,18 @@ def throw(dwarf_name, env):
     
     env.update_dwarf(dwarf_name, dwarf)
 
+def turn_around(dwarf_name, env):
+    dwarf = env.get_dwarf(dwarf_name)
+    if dwarf.direction == 'North':
+        dwarf.direction = 'South'
+    elif dwarf.direction == 'South':
+        dwarf.direction = 'North'
+    elif dwarf.direction == 'West':
+        dwarf.direction = 'East'
+    else:
+        dwarf.direction = 'West'
+    env.update_dwarf(dwarf_name, dwarf)
+
 def throw_area(dwarf_name, coords1, coords2, env):
     dwarf = env.get_dwarf(dwarf_name)
 
@@ -596,7 +608,9 @@ def throw_area(dwarf_name, coords1, coords2, env):
         env.update_dwarf(dwarf_name, dwarf)
         
         #start throwing in area    
+        turn_around(dwarf_name, env)
         throw(dwarf_name, env)
+        turn_around(dwarf_name, env)
 
         dwarf.doing_command = 'Throw:Move in area'
         env.update_dwarf(dwarf_name, dwarf)
@@ -615,7 +629,10 @@ def throw_area(dwarf_name, coords1, coords2, env):
         env.update_dwarf(dwarf_name, dwarf)
     elif dwarf.doing_command == 'Throw:Move in left corner':
         if dwarf.coords[1] > coords1[1]:
+            turn_around(dwarf_name, env)
             throw(dwarf_name, env)
+            turn_around(dwarf_name, env)
+
             move(dwarf_name, (1, dwarf.coords[1] - 1, dwarf.coords[2]), env)
             env.update_dwarf(dwarf_name, dwarf)
         else:       
@@ -623,7 +640,10 @@ def throw_area(dwarf_name, coords1, coords2, env):
             env.update_dwarf(dwarf_name, dwarf)
             
             if dwarf.coords[2] > coords1[2]:
+                turn_around(dwarf_name, env)
                 throw(dwarf_name, env)
+                turn_around(dwarf_name, env)
+
                 move(dwarf_name, (1, dwarf.coords[1], dwarf.coords[2] - 1), env)
                 env.update_dwarf(dwarf_name, dwarf)
             else:
@@ -645,7 +665,10 @@ def throw_area(dwarf_name, coords1, coords2, env):
             env.update_dwarf(dwarf_name, dwarf)
         
             if dwarf.coords[1] + 1 <= coords2[1]:
+                turn_around(dwarf_name, env)
                 throw(dwarf_name, env)
+                turn_around(dwarf_name, env)
+
                 move(dwarf_name, (1, dwarf.coords[1] + 1, dwarf.coords[2]), env) 
                 env.update_dwarf(dwarf_name, dwarf)
             else:
@@ -656,7 +679,10 @@ def throw_area(dwarf_name, coords1, coords2, env):
                 env.update_dwarf(dwarf_name, dwarf)
                 return
         else:
+            turn_around(dwarf_name, env)
             throw(dwarf_name, env)
+            turn_around(dwarf_name, env)
+
             move(dwarf_name, (1, destination[0], destination[1]), env)            
             env.update_dwarf(dwarf_name, dwarf)            
 
@@ -667,7 +693,7 @@ def build_block(dwarf_name, env):
 
 def mark_as_garbage(dwarf_name, item_name, env):
     dwarf = env.get_dwarf(dwarf_name)
-    dwarf.mark_garbage(item_name)
+    dwarf.mark_garbage(environment.BLOCKS[item_name])
     env.update_dwarf(dwarf_name, dwarf)
 
 def heal(dwarf_name, other_name):
@@ -714,7 +740,8 @@ def help():
 
     print("Dwarf can mine an area with left high corner (coords1.row, coords1.column) and right low corner (coords2.row, coords2.column) by typing: ")
     print(MINE_COMMANDS['Mine Area'])
-    print("row1 col1 row2 col2 #where row1, 2 and col1, 2 are integer numbers in 0..", environment.SIZE_OF_FIELD, " and are the corners of area mentioned higher", sep='')
+    print("row1 col1")
+    print("row2 col2 #where row1, 2 and col1, 2 are integer numbers in 0..", environment.SIZE_OF_FIELD, " and are the corners of area mentioned higher", sep='')
     print()
 
     print("You can see dwarf's inventory by typing: ", INFO_COMMANDS['Show Inventory'])
@@ -736,7 +763,8 @@ def help():
 
     print("Dwarf can throw all marked as garbage from his inventory in an area with left high corner (coords1.row, coords1.column) and right low corner (coords2.row, coords2.column) by typing:")
     print(THROW_COMMANDS['Throw'])
-    print("row1 col1 row2 col2 #where row1, 2 and col1, 2 are integer numbers in 0..", environment.SIZE_OF_FIELD, " and are the corners of area mentioned higher", sep='')
+    print("row1 col1")
+    print("row2 col2 #where row1, 2 and col1, 2 are integer numbers in 0..", environment.SIZE_OF_FIELD, " and are the corners of area mentioned higher", sep='')
     print()
     
     print("You can finish playing for this particular dwarf on this particular game move by typing: ", FINISH_COMMANDS['Move on to another dwarf'])
@@ -762,6 +790,11 @@ def describe():
     print("G stands for goblin")
     print("D stands for dwarf")
 
+def can_be_parsed_into_coords(data):
+    for c in data:
+        if not c in ' 0123456789':
+            return False
+    return True
 
 print('''
     Welcome to the world of dwarf and goblins!\n
@@ -842,14 +875,20 @@ while True:
                         print("You can move each dwarf only once at single game stage")
                         continue
 
-                    coords = tuple(map(int, input().split()))
-                    if len(coords) != 3:
+                    data = input()
+                    if not can_be_parsed_into_coords(data):
                         print("Unnacceptable coords format")
                         continue
 
+                    coords = tuple(map(int, data.split()))
+                    if len(coords) != 2:
+                        print("Unnacceptable coords format")
+                        continue
+
+                    coords_ = (1, coords[0], coords[1])
                     dwarf.doing_command = 'Move'
                     env.update_dwarf(dwarf_name, dwarf)
-                    move(dwarf_name, coords, env)
+                    move(dwarf_name, coords_, env)
                     env.update_dwarf(dwarf_name, dwarf)
 
                     is_move_used = True
@@ -860,29 +899,47 @@ while True:
                         if is_mine_area_used:
                             print("Each dwarf can mine area only once at single game stage")
                             continue
-                        
-                        coords1 = tuple(map(int, input().split()))
-                        if len(coords1) != 3:
+
+                        data = input()
+                        if not can_be_parsed_into_coords(data):
+                            print("Unnacceptable coords format")
+                            continue
+                            
+                        coords1 = tuple(map(int, data.split()))
+                        if len(coords1) != 2:
+                            print("Unnacceptable coords format")
+                            continue
+                        coords1_= (1, coords1[0], coords1[1])
+
+                        data = input()
+                        if not can_be_parsed_into_coords(data):
                             print("Unnacceptable coords format")
                             continue
 
-                        coords2 = tuple(map(int, input().split()))
-                        if len(coords2) != 3:
+                        coords2 = tuple(map(int, data.split()))
+                        if len(coords2) != 2:
                             print("Unnacceptable coords format")
                             continue
+                        coords2_ = (1, coords2[0], coords2[1])
 
-                        if not(coords1[1] <= coords2[1] and coords1[2] <= coords2[2]):
+                        if not(coords1_[1] <= coords2_[1] and coords1_[2] <= coords2_[2]):
                             print('Choose LEFT HIGH and RIGHT LOW corners of mining area') 
                             continue
                     
                         dwarf.doing_command = 'Mine'
-                        dwarf.coords1 = coords1
-                        dwarf.coords2 = coords2
+                        dwarf.coords1 = coords1_
+                        dwarf.coords2 = coords2_
                         
                         env.update_dwarf(dwarf_name, dwarf)
-                        mine_area(dwarf_name, coords1, coords2, env)
+                        mine_area(dwarf_name, coords1_, coords2_, env)
                         env.update_dwarf(dwarf_name, dwarf)
                         is_mine_area_used = True
+                    else:                         
+                        if is_mine_area_used:
+                            print("Each dwarf can mine area only once at single game stage")
+                            continue 
+
+                        mine(dwarf_name, env)
 
                     command_exists = True
             for c in list(INFO_COMMANDS.keys()):
@@ -922,27 +979,39 @@ while True:
                         if is_throw_used:
                             print("Each dwarf can throw items only once at single game stage")
                             continue
-                            
-                        coords1 = tuple(map(int, input().split()))
-                        if len(coords1) != 3:
+
+                        data = input()
+                        if not can_be_parsed_into_coords(data):
                             print("Unnacceptable coords format")
                             continue
 
-                        coords2 = tuple(map(int, input().split()))
-                        if len(coords2) != 3:
+                        coords1 = tuple(map(int, data.split()))
+                        if len(coords1) != 2:
+                            print("Unnacceptable coords format")
+                            continue
+                        coords1_ = (1, coords1[0], coords1[1])
+
+                        data = input()
+                        if not can_be_parsed_into_coords(data):
                             print("Unnacceptable coords format")
                             continue
 
-                        if not(coords1[1] <= coords2[1] and coords1[2] <= coords2[2]):
+                        coords2 = tuple(map(int, data.split()))
+                        if len(coords2) != 2:
+                            print("Unnacceptable coords format")
+                            continue
+                        coords2_ = (1, coords2[0], coords2[1])
+
+                        if not(coords1_[1] <= coords2_[1] and coords1_[2] <= coords2_[2]):
                             print('Choose LEFT HIGH and RIGHT LOW corners of dump area')
                             continue
                     
                         dwarf.doing_command = 'Throw'
-                        dwarf.dump_coords1 = coords1
-                        dwarf.dump_coords2 = coords2
+                        dwarf.dump_coords1 = coords1_
+                        dwarf.dump_coords2 = coords2_
                         
                         env.update_dwarf(dwarf_name, dwarf)
-                        throw_area(dwarf_name, coords1, coords2, env)
+                        throw_area(dwarf_name, coords1_, coords2_, env)
                         env.update_dwarf(dwarf_name, dwarf)
                         is_throw_used = True
 
